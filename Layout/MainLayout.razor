@@ -1,0 +1,36 @@
+@inject IJSRuntime JS
+@inherits LayoutComponentBase
+
+<div class="page">
+    <div class="sidebar">
+        <NavMenu />
+    </div>
+
+    <main>
+        <div class="top-row px-4">
+            <button class="theme-toggle" @onclick="ToggleDark" title="@(isDark ? "Switch to light" : "Switch to dark")">
+                @(isDark ? "☀️" : "🌙")
+            </button>
+        </div>
+
+        <article class="content px-4">
+            @Body
+        </article>
+    </main>
+</div>
+
+@code {
+    bool isDark = true;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+            await JS.InvokeVoidAsync("setTheme", "dark");
+    }
+
+    async Task ToggleDark()
+    {
+        isDark = !isDark;
+        await JS.InvokeVoidAsync("setTheme", isDark ? "dark" : "light");
+    }
+}

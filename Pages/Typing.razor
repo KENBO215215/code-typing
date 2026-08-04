@@ -1,0 +1,656 @@
+@page "/typing"
+@using System.Text
+@inject IJSRuntime JS
+
+<div class="page-header">
+    <h2 class="page-title">⌨️ Code Typing Practice</h2>
+    @if (IsComplete)
+    {
+        <div class="complete-badge">✅ Complete!</div>
+    }
+</div>
+
+<div class="typing-container" style="--ok-color:@OkColor; --ng-color:@NgColor; --remain-color:@RemainColor;">
+	<div class="left">
+		<div class="controls">
+            <div class="ctrl-row">
+                <div class="ctrl-group">
+                    <label class="ctrl-label">Algorithm</label>
+                    <select @bind="SelectedId">
+                        @foreach(var kv in Snippets)
+                        {
+                            <option value="@kv.Key">@kv.Value.Title</option>
+                        }
+                    </select>
+                </div>
+                <div class="ctrl-group">
+                    <label class="ctrl-label">Language</label>
+                    <select @bind="SelectedLang">
+                        <option value="1">C#</option>
+                        <option value="2">Python</option>
+                        <option value="3">Exam Notes</option>
+                    </select>
+                </div>
+                <button class="reset-btn" @onclick="ResetTyping" title="Reset">↺ Reset</button>
+            </div>
+            <div class="ctrl-row ctrl-row--colors">
+                <label>✅ <input type="color" @bind="OkColor" /></label>
+                <label>❌ <input type="color" @bind="NgColor" /></label>
+                <label>… <input type="color" @bind="RemainColor" /></label>
+            </div>
+		</div>
+
+		<div class="code-block code-explain-grid">
+			<div class="code-col"><pre>@(DisplayCode)</pre></div>
+			<div class="explain-col">
+				@foreach(var ex in GetLineExplanations())
+				{
+					<div class="line-explain">@ex</div>
+				}
+			</div>
+		</div>
+		<div class="explain">
+			@foreach (var line in CurrentExplanations)
+			{
+				<div>@line</div>
+			}
+		</div>
+
+		<div class="sample-box">
+			<label>Paste your sample (will replace code when applied):</label>
+			<textarea @bind="SampleText" rows="6" placeholder="Paste code here..."></textarea>
+			<div>
+				<button @onclick="ApplySample">Use as sample</button>
+				<button @onclick="ClearSample" style="margin-left:8px">Clear sample</button>
+			</div>
+		</div>
+	</div>
+
+	<div class="right">
+		<div id="type-window" class="type-window">
+			<div class="drag-handle">Type Window</div>
+			<div class="type-area" style="position:relative;">
+				<pre id="overlay" class="overlay">@((MarkupString)RenderComparison())</pre>
+				<textarea id="type-textarea" @bind="Typed" @bind:event="oninput" rows="15" placeholder="Type the code here..." spellcheck="false" autocapitalize="off" autocomplete="off"></textarea>
+			</div>
+		</div>
+@* Script for dragging the type-window *@
+<script>
+	(function(){
+		const win = document.getElementById('type-window');
+		if (!win) return;
+		const handle = win.querySelector('.drag-handle');
+		if (!handle) return;
+		let dragging = false, startX=0, startY=0, origX=0, origY=0;
+		handle.addEventListener('mousedown', (e)=>{
+			dragging = true; startX = e.clientX; startY = e.clientY;
+			const rect = win.getBoundingClientRect(); origX = rect.left; origY = rect.top;
+			win.style.position = 'absolute'; win.style.zIndex = 9999;
+			e.preventDefault();
+		});
+		window.addEventListener('mousemove', (e)=>{
+			if(!dragging) return;
+			const dx = e.clientX - startX; const dy = e.clientY - startY;
+			win.style.left = (origX + dx) + 'px'; win.style.top = (origY + dy) + 'px';
+		});
+		window.addEventListener('mouseup', ()=>{ dragging = false; });
+		// touch support
+		handle.addEventListener('touchstart', (e)=>{
+			const t = e.touches[0];
+			dragging = true; startX = t.clientX; startY = t.clientY;
+			const rect = win.getBoundingClientRect(); origX = rect.left; origY = rect.top;
+			win.style.position = 'absolute'; win.style.zIndex = 9999;
+			e.preventDefault();
+		}, {passive:false});
+		window.addEventListener('touchmove',(e)=>{
+			if(!dragging) return;
+			const t = e.touches[0];
+			const dx = t.clientX - startX; const dy = t.clientY - startY;
+			win.style.left = (origX + dx) + 'px'; win.style.top = (origY + dy) + 'px';
+		}, {passive:false});
+		window.addEventListener('touchend', ()=>{ dragging = false; });
+
+		// sync overlay scroll and focus handling
+		const ta = document.getElementById('type-textarea');
+		const overlay = document.getElementById('overlay');
+		if (ta && overlay) {
+			// sync on scroll/input
+			ta.addEventListener('scroll', ()=> { overlay.scrollTop = ta.scrollTop; });
+			ta.addEventListener('input', ()=> { overlay.scrollTop = ta.scrollTop; });
+			// composition events for IME: update overlay during composition
+			ta.addEventListener('compositionstart', ()=> { /* no-op: Blazor already updates oninput after compositionend */ });
+			ta.addEventListener('compositionend', ()=> { overlay.scrollTop = ta.scrollTop; });
+			// clicking the window focuses textarea
+			win.addEventListener('click', (e)=>{ if (e.target !== ta) { ta.focus(); } });
+		}
+		// keyboard highlighting
+		const kb = document.getElementById('onScreenKeyboard');
+		if (ta && kb) {
+			const keyDown = (e)=>{
+				const k = (e.key === ' ') ? 'Space' : e.key;
+				const el = kb.querySelector(`[data-key="${k}"]`) || kb.querySelector(`[data-key="${k.toLowerCase()}"]`);
+				if (el) el.classList.add('active');
+			};
+			const keyUp = (e)=>{
+				const k = (e.key === ' ') ? 'Space' : e.key;
+				const el = kb.querySelector(`[data-key="${k}"]`) || kb.querySelector(`[data-key="${k.toLowerCase()}"]`);
+				if (el) el.classList.remove('active');
+			};
+			window.addEventListener('keydown', keyDown);
+			window.addEventListener('keyup', keyUp);
+		}
+	})();
+</script>
+
+		<!-- On-screen keyboard: highlights keys while typing -->
+		<div class="on-screen-keyboard" id="onScreenKeyboard" aria-hidden="false">
+			<div class="osk-row">
+				<div class="key" data-key="Esc">Esc</div>
+				<div class="key" data-key="F1">F1</div>
+				<div class="key" data-key="F2">F2</div>
+				<div class="key" data-key="F3">F3</div>
+				<div class="key" data-key="F4">F4</div>
+			</div>
+			<div class="osk-row">
+				<div class="key special" data-key="Backquote">`</div>
+				<div class="key" data-key="1">1</div>
+				<div class="key" data-key="2">2</div>
+				<div class="key" data-key="3">3</div>
+				<div class="key" data-key="4">4</div>
+				<div class="key" data-key="5">5</div>
+				<div class="key" data-key="6">6</div>
+				<div class="key" data-key="7">7</div>
+				<div class="key" data-key="8">8</div>
+				<div class="key" data-key="9">9</div>
+				<div class="key" data-key="0">0</div>
+				<div class="key" data-key="-">-</div>
+				<div class="key" data-key="=">=</div>
+				<div class="key wide" data-key="Backspace">Backspace</div>
+			</div>
+			<div class="osk-row">
+				<div class="key wide" data-key="Tab">Tab</div>
+				<div class="key" data-key="q">Q</div>
+				<div class="key" data-key="w">W</div>
+				<div class="key" data-key="e">E</div>
+				<div class="key" data-key="r">R</div>
+				<div class="key" data-key="t">T</div>
+				<div class="key" data-key="y">Y</div>
+				<div class="key" data-key="u">U</div>
+				<div class="key" data-key="i">I</div>
+				<div class="key" data-key="o">O</div>
+				<div class="key" data-key="p">P</div>
+				<div class="key" data-key="[">[</div>
+				<div class="key" data-key="]">]</div>
+				<div class="key" data-key="\\">\</div>
+			</div>
+			<div class="osk-row">
+				<div class="key wide" data-key="CapsLock">Caps</div>
+				<div class="key" data-key="a">A</div>
+				<div class="key" data-key="s">S</div>
+				<div class="key" data-key="d">D</div>
+				<div class="key" data-key="f">F</div>
+				<div class="key" data-key="g">G</div>
+				<div class="key" data-key="h">H</div>
+				<div class="key" data-key="j">J</div>
+				<div class="key" data-key="k">K</div>
+				<div class="key" data-key="l">L</div>
+				<div class="key" data-key=";">;</div>
+				<div class="key" data-key="'">'</div>
+				<div class="key wide" data-key="Enter">Enter</div>
+			</div>
+			<div class="osk-row">
+				<div class="key wide" data-key="Shift">Shift</div>
+				<div class="key" data-key="z">Z</div>
+				<div class="key" data-key="x">X</div>
+				<div class="key" data-key="c">C</div>
+				<div class="key" data-key="v">V</div>
+				<div class="key" data-key="b">B</div>
+				<div class="key" data-key="n">N</div>
+				<div class="key" data-key="m">M</div>
+				<div class="key" data-key=",">,</div>
+				<div class="key" data-key=".">.</div>
+				<div class="key" data-key="/">/</div>
+				<div class="key wide" data-key="ShiftRight">Shift</div>
+			</div>
+			<div class="osk-row">
+				<div class="key" data-key="Control">Ctrl</div>
+				<div class="key" data-key="Meta">Win</div>
+				<div class="key" data-key="Alt">Alt</div>
+				<div class="key extra wide" data-key="Space">Space</div>
+				<div class="key" data-key="AltRight">Alt</div>
+				<div class="key" data-key="ContextMenu">Menu</div>
+				<div class="key" data-key="ControlRight">Ctrl</div>
+			</div>
+		</div>
+
+		<div class="live">
+			<div class="live-header">Live compare:</div>
+			<pre class="live-compare">@((MarkupString)RenderComparison())</pre>
+		</div>
+
+		<div class="stats">
+            <div class="stat-card stat-card--score">
+                <div class="stat-val">@Score</div>
+                <div class="stat-lbl">Score</div>
+                @if (IsNewRecord)
+                {
+                    <div class="new-record">🏆 NEW!</div>
+                }
+            </div>
+            <div class="stat-card">
+                <div class="stat-val">@Accuracy<span class="stat-unit">%</span></div>
+                <div class="stat-lbl">Accuracy</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-val">@Wpm<span class="stat-unit">wpm</span></div>
+                <div class="stat-lbl">WPM</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-val">@CorrectChars</div>
+                <div class="stat-lbl">Correct</div>
+            </div>
+            <div class="stat-card stat-card--hi">
+                <div class="stat-val">@HiScore</div>
+                <div class="stat-lbl">Best</div>
+            </div>
+		</div>
+	</div>
+</div>
+
+@code {
+	private int selectedId = 1;
+	public int SelectedId { get => selectedId; set { selectedId = value; ResetTyping(); } }
+	private int selectedLang = 1;
+	public int SelectedLang { get => selectedLang; set { selectedLang = value; ResetTyping(); } }
+
+	string _typed = string.Empty;
+	string Typed
+	{
+		get => _typed;
+		set
+		{
+			if (_typed.Length == 0 && value.Length > 0) startTime = DateTime.Now;
+			_typed = value;
+			_ = UpdateScoreAsync();
+		}
+	}
+
+	string OkColor { get; set; } = "#2e7d32";
+	string NgColor { get; set; } = "#c62828";
+	string RemainColor { get; set; } = "#777777";
+	string SampleText { get; set; } = string.Empty;
+	bool RequireTyping { get; set; } = false;
+
+	// ── Score & Timer ──
+	DateTime? startTime;
+	int HiScore;
+	bool IsNewRecord;
+
+	double ElapsedSeconds => startTime.HasValue ? (DateTime.Now - startTime.Value).TotalSeconds : 0;
+	string Wpm => ElapsedSeconds > 1 ? ((int)((CorrectChars / 5.0) / (ElapsedSeconds / 60.0))).ToString() : "–";
+	bool IsComplete => _typed.Length > 0 && _typed.Replace("\r\n","\n") == DisplayCode.Replace("\r\n","\n");
+
+	int Score
+	{
+		get
+		{
+			if (TotalTyped == 0) return 0;
+			double acc = (double)CorrectChars / TotalTyped;
+			double prog = (double)CorrectChars / Math.Max(1, DisplayCode.Length);
+			double wpmVal = ElapsedSeconds > 1 ? (CorrectChars / 5.0) / (ElapsedSeconds / 60.0) : 0;
+			return (int)(CorrectChars * acc * 10 + wpmVal * 3 + (IsComplete ? 200 : 0));
+		}
+	}
+
+	async Task UpdateScoreAsync()
+	{
+		if (TotalTyped == 0) return;
+		var key = $"{selectedId}_{selectedLang}";
+		bool newRec = await JS.InvokeAsync<bool>("setHiScore", key, Score);
+		if (newRec)
+		{
+			HiScore = Score;
+			IsNewRecord = true;
+			StateHasChanged();
+		}
+	}
+
+	async Task LoadHiScoreAsync()
+	{
+		var key = $"{selectedId}_{selectedLang}";
+		HiScore = await JS.InvokeAsync<int>("getHiScore", key);
+		IsNewRecord = false;
+		StateHasChanged();
+	}
+
+	protected override async Task OnAfterRenderAsync(bool firstRender)
+	{
+		if (firstRender) await LoadHiScoreAsync();
+	}
+
+	void ResetTyping()
+	{
+		_typed = string.Empty;
+		startTime = null;
+		IsNewRecord = false;
+		_ = LoadHiScoreAsync();
+	}
+
+	class Snippet
+	{
+		public string Title { get; set; }
+		public string CSharp { get; set; }
+		public string Python { get; set; }
+		public string[] Explanations { get; set; }
+	}
+
+	void ApplySample()
+	{
+		if (!string.IsNullOrEmpty(SampleText))
+		{
+			_displayOverride = SampleText.Replace("\r\n","\n");
+			ResetTyping();
+		}
+	}
+
+	void ClearSample()
+	{
+		_displayOverride = null;
+		SampleText = string.Empty;
+		ResetTyping();
+	}
+
+	private string? _displayOverride = null;
+
+	string DisplayCode => _displayOverride ?? (SelectedLang == 1 ? Snippets[SelectedId].CSharp
+						: SelectedLang == 2 ? Snippets[SelectedId].Python
+						: string.Join("\n", Snippets[SelectedId].Explanations));
+
+	Dictionary<int, Snippet> Snippets = new Dictionary<int, Snippet>
+	{
+		[1] = new Snippet
+		{
+			Title = "Binary Search",
+			CSharp = "int BinarySearch(int[] a, int target)\n{\n    int left = 0, right = a.Length - 1;\n    while (left <= right)\n    {\n        int mid = left + (right - left) / 2;\n        if (a[mid] == target) return mid;\n        if (a[mid] < target) left = mid + 1;\n        else right = mid - 1;\n    }\n    return -1;\n}",
+			Python = "def binary_search(a, target):\n    left, right = 0, len(a)-1\n    while left <= right:\n        mid = (left + right)//2\n        if a[mid] == target:\n            return mid\n        if a[mid] < target:\n            left = mid + 1\n        else:\n            right = mid - 1\n    return -1",
+			Explanations = new[] {
+				"関数宣言: 配列 a と検索対象 target を受け取る",
+				"関数本体の開始",
+				"探索範囲の左端と右端を初期化",
+				"while ループ: 範囲に要素が残る間継続",
+				"ループ本体開始",
+				"中間位置 mid を計算 (オーバーフロー対策で差分から計算)",
+				"見つかった場合はそのインデックスを返す",
+				"中間値より小さければ左側を右に移動",
+				"そうでなければ右側を左に移動",
+				"ループ終了",
+				"見つからなければ -1 を返す",
+				"関数終了"
+			}
+		},
+
+		[11] = new Snippet
+		{
+			Title = "Stack Push (LIFO)",
+			CSharp = "void Push(int value)\n{\n    if (top >= MAX_SIZE - 1) { /* overflow */ }\n    else { top = top + 1; stack[top] = value; }\n}",
+			Python = "def push(stack, value, top, MAX_SIZE):\n    if top >= MAX_SIZE - 1:\n        raise Exception('overflow')\n    else:\n        top += 1\n        stack[top] = value\n    return top",
+			Explanations = new[] {
+				"スタックの上位置 top を確認し容量超過ならエラー",
+				"そうでなければ top を1つ増やして値を格納",
+			}
+		},
+
+		[12] = new Snippet
+		{
+			Title = "Queue Dequeue (Ring Buffer)",
+			CSharp = "int Dequeue()\n{\n    if (head == tail) { /* empty */ return -1; }\n    else { var value = queue[head]; head = (head + 1) % MAX_SIZE; return value; }\n}",
+			Python = "def dequeue(queue, head, tail, MAX_SIZE):\n    if head == tail:\n        raise Exception('empty')\n    else:\n        value = queue[head]\n        head = (head + 1) % MAX_SIZE\n        return value, head",
+			Explanations = new[] {
+				"head と tail が等しければキューは空",
+				"先頭要素を取り出して head を循環インクリメント",
+			}
+		},
+
+		[13] = new Snippet
+		{
+			Title = "Linked List Traversal",
+			CSharp = "void Traverse(int start)\n{\n    int p = start;\n    while (p != NIL) { /* process node[p].value */ p = node[p].next; }\n}",
+			Python = "def traverse(start):\n    p = start\n    while p is not None:\n        # process node[p].value\n        p = node[p].next",
+			Explanations = new[] {
+				"始点 start を p にセット",
+				"p が空ポインタでない間 node[p] を処理し次へ移動",
+			}
+		},
+
+		[14] = new Snippet
+		{
+			Title = "Linear Search",
+			CSharp = "int LinearSearch(int[] a, int target)\n{\n    for (int i = 0; i < a.Length; i++) if (a[i] == target) return i; return -1;\n}",
+			Python = "def linear_search(a, target):\n    for i in range(len(a)):\n        if a[i] == target:\n            return i\n    return -1",
+			Explanations = new[] {
+				"先頭から順に target と比較",
+				"見つかればインデックスを返す、見つからなければ -1",
+			}
+		},
+
+		[15] = new Snippet
+		{
+			Title = "Binary Search (sorted)",
+			CSharp = "int BinarySearch(int[] a, int target)\n{\n    int low = 0, high = a.Length - 1;\n    while (low <= high) { int mid = (low + high) / 2; if (a[mid] == target) return mid; else if (a[mid] < target) low = mid + 1; else high = mid - 1; } return -1;\n}",
+			Python = "def binary_search(a, target):\n    low, high = 0, len(a)-1\n    while low <= high:\n        mid = (low + high)//2\n        if a[mid] == target: return mid\n        elif a[mid] < target: low = mid + 1\n        else: high = mid - 1\n    return -1",
+			Explanations = new[] {
+				"low と high で探索範囲を管理",
+				"mid を計算して比較し範囲を半分に絞る",
+				"見つかればインデックス、なければ -1",
+			}
+		},
+
+		[16] = new Snippet
+		{
+			Title = "Hash Search (Open Addressing)",
+			CSharp = "int HashSearch(int[] table, int key)\n{\n    int n = table.Length; int h = key % n; int i = 0;\n    while (table[(h + i) % n] != EMPTY) { if (table[(h + i) % n] == key) return (h + i) % n; i++; }\n    return -1;\n}",
+			Python = "def hash_search(table, key):\n    n = len(table)\n    h = key % n\n    i = 0\n    while table[(h + i) % n] is not None:\n        if table[(h + i) % n] == key:\n            return (h + i) % n\n        i += 1\n    return -1",
+			Explanations = new[] {
+				"初期ハッシュ h を計算",
+				"衝突時は線形探索で次のスロットを調べる",
+				"空スロットなら見つからないと判断",
+			}
+		},
+
+		[17] = new Snippet
+		{
+			Title = "GCD (Euclid, recursive)",
+			CSharp = "int Gcd(int x, int y) { if (y == 0) return x; else return Gcd(y, x % y); }",
+			Python = "def gcd(x, y):\n    if y == 0:\n        return x\n    else:\n        return gcd(y, x % y)",
+			Explanations = new[] {
+				"y が0なら x が最大公約数",
+				"そうでなければ再帰的に gcd(y, x mod y)",
+			}
+		},
+
+		[18] = new Snippet
+		{
+			Title = "Brute-force String Search",
+			CSharp = "int StrSearch(string text, string pat)\n{\n    for (int i = 0; i <= text.Length - pat.Length; i++) { int j = 0; while (j < pat.Length && text[i + j] == pat[j]) j++; if (j == pat.Length) return i; } return -1;\n}",
+			Python = "def str_search(text, pat):\n    for i in range(len(text) - len(pat) + 1):\n        j = 0\n        while j < len(pat) and text[i+j] == pat[j]:\n            j += 1\n        if j == len(pat):\n            return i\n    return -1",
+			Explanations = new[] {
+				"テキストの各開始位置でパターンと比較（力まかせ）",
+				"一致すれば開始位置を返す、なければ -1",
+			}
+		},
+
+		[2] = new Snippet
+		{
+			Title = "Merge Sort",
+			CSharp = "void MergeSort<T>(T[] a) where T : IComparable<T>\n{ /* ... */ }",
+			Python = "def merge_sort(a):\n    # ...\n    return a",
+			Explanations = new[] {
+				"関数宣言: ジェネリックな配列を受け取りソートする(型は比較可能であること)",
+				"関数本体: 再帰的に配列を分割してマージする実装の省略部",
+			}
+		},
+
+		[3] = new Snippet
+		{
+			Title = "Quick Sort",
+			CSharp = "void QuickSort(int[] a,int lo,int hi) { /* ... */ }",
+			Python = "def quicksort(a, lo, hi):\n    # ...",
+			Explanations = new[] {
+				"関数宣言: 配列と範囲を受け取りクイックソートを実行",
+				"関数本体はピボットで分割して再帰的にソートする（省略）",
+			}
+		},
+
+		[4] = new Snippet
+		{
+			Title = "Bubble Sort",
+			CSharp = "void BubbleSort(int[] a)\n{\n    for (int i = 0; i < a.Length; i++)\n        for (int j = 0; j + 1 < a.Length - i; j++)\n            if (a[j] > a[j+1]) { var t = a[j]; a[j]=a[j+1]; a[j+1]=t; }\n}",
+			Python = "def bubble_sort(a):\n    n = len(a)\n    for i in range(n):\n        for j in range(0, n-i-1):\n            if a[j] > a[j+1]:\n                a[j], a[j+1] = a[j+1], a[j]",
+			Explanations = new[] {
+				"外側ループで何度か走査",
+				"隣接要素を比較して交換 (バブル)",
+				"最悪 O(n^2) の計算量"
+			}
+		},
+
+		[5] = new Snippet
+		{
+			Title = "Insertion Sort",
+			CSharp = "void InsertionSort(int[] a)\n{\n    for (int i = 1; i < a.Length; i++)\n    {\n        int key = a[i]; int j = i-1;\n        while (j >= 0 && a[j] > key) { a[j+1] = a[j]; j--; }\n        a[j+1] = key;\n    }\n}",
+			Python = "def insertion_sort(a):\n    for i in range(1, len(a)):\n        key = a[i]\n        j = i-1\n        while j >=0 and a[j] > key:\n            a[j+1] = a[j]\n            j -= 1\n        a[j+1] = key",
+			Explanations = new[] {
+				"未整列部分から1つずつ要素を取り出して挿入",
+				"挿入により左側は常に整列済み",
+				"計算量は O(n^2)（小規模で有効）"
+			}
+		},
+
+		[6] = new Snippet
+		{
+			Title = "DFS (Depth-First Search)",
+			CSharp = "void DFS(int v, List<int>[] g, bool[] seen)\n{\n    seen[v]=true;\n    foreach(var to in g[v]) if(!seen[to]) DFS(to,g,seen);\n}",
+			Python = "def dfs(v, g, seen):\n    seen[v]=True\n    for to in g[v]:\n        if not seen[to]:\n            dfs(to, g, seen)",
+			Explanations = new[] {
+				"ノード v を訪問済にする",
+				"隣接ノードを再帰で深く訪問する",
+				"再帰またはスタックで実装可能"
+			}
+		},
+
+		[7] = new Snippet
+		{
+			Title = "BFS (Breadth-First Search)",
+			CSharp = "void BFS(int s, List<int>[] g)\n{\n    var q = new Queue<int>(); var seen = new bool[g.Length];\n    q.Enqueue(s); seen[s]=true;\n    while(q.Count>0){ var v=q.Dequeue(); foreach(var to in g[v]) if(!seen[to]){ seen[to]=true; q.Enqueue(to); } }\n}",
+			Python = "from collections import deque\ndef bfs(s, g):\n    q = deque([s])\n    seen = [False]*len(g)\n    seen[s]=True\n    while q:\n        v = q.popleft()\n        for to in g[v]:\n            if not seen[to]:\n                seen[to]=True\n                q.append(to)",
+			Explanations = new[] {
+				"スタートノードをキューに入れる",
+				"キューから取り出して隣接ノードを順に処理",
+				"レベル順に訪問でき最短距離にも利用可能"
+			}
+		},
+
+		[8] = new Snippet
+		{
+			Title = "Dijkstra",
+			CSharp = "void Dijkstra(int s, List<(int to,int w)>[] g, long[] dist)\n{\n    var pq = new SortedSet<(long v,int node)>();\n    for(int i=0;i<dist.Length;i++) dist[i]=long.MaxValue; dist[s]=0; pq.Add((0,s));\n    while(pq.Count>0){ var cur = pq.Min; pq.Remove(cur); long d=cur.v; int v=cur.node; if(d!=dist[v]) continue; foreach(var e in g[v]){ if(dist[e.to] > d + e.w){ dist[e.to]=d+e.w; pq.Add((dist[e.to], e.to)); } } }\n}",
+			Python = "import heapq\ndef dijkstra(s, g):\n    INF=10**18\n    dist=[INF]*len(g)\n    dist[s]=0\n    pq=[(0,s)]\n    while pq:\n        d,v = heapq.heappop(pq)\n        if d!=dist[v]: continue\n        for to,w in g[v]:\n            if dist[to] > d + w:\n                dist[to] = d + w\n                heapq.heappush(pq, (dist[to], to))\n    return dist",
+			Explanations = new[] {
+				"全頂点の距離を初期化（INF）",
+				"優先度付きキューで最短距離を拡張",
+				"辺の重みが非負である必要がある"
+			}
+		},
+
+		[9] = new Snippet
+		{
+			Title = "Kadane (Max Subarray)",
+			CSharp = "int Kadane(int[] a)\n{\n    int best = int.MinValue, cur = 0;\n    foreach(var x in a){ cur = Math.Max(x, cur + x); best = Math.Max(best, cur); }\n    return best;\n}",
+			Python = "def kadane(a):\n    best = -10**18\n    cur = 0\n    for x in a:\n        cur = max(x, cur + x)\n        best = max(best, cur)\n    return best",
+			Explanations = new[] {
+				"現在の部分和 cur を更新（拡張か開始か決定）",
+				"これまでの最大 best を保持",
+				"線形時間 O(n) で解ける"
+			}
+		},
+
+		[10] = new Snippet
+		{
+			Title = "Two-Pointer Pattern",
+			CSharp = "bool TwoSumSorted(int[] a, int target)\n{\n    int l=0,r=a.Length-1;\n    while(l<r){ int s=a[l]+a[r]; if(s==target) return true; if(s<target) l++; else r--; }\n    return false;\n}",
+			Python = "def two_sum_sorted(a, target):\n    l, r = 0, len(a)-1\n    while l < r:\n        s = a[l] + a[r]\n        if s == target: return True\n        if s < target: l += 1\n        else: r -= 1\n    return False",
+			Explanations = new[] {
+				"左右からポインタを動かして和を調べる",
+				"ソート済み配列で O(n) で解ける",
+				"2和の検出に有効"
+			}
+		},
+	};
+
+	// DisplayCode is defined above with optional override (_displayOverride)
+
+	IEnumerable<string> CurrentExplanations => Snippets[SelectedId].Explanations;
+
+	IEnumerable<string> GetLineExplanations()
+	{
+		var code = DisplayCode.Replace("\r\n","\n");
+		var lines = code.Split('\n');
+		var explains = new List<string>();
+		var baseEx = Snippets[SelectedId].Explanations;
+		for (int i=0;i<lines.Length;i++)
+		{
+			if (i < baseEx.Length) explains.Add(baseEx[i]);
+			else explains.Add(string.Empty);
+		}
+		return explains;
+	}
+
+	int TotalTyped => Typed?.Length ?? 0;
+	int CorrectChars => ComputeCorrect();
+	string Accuracy => TotalTyped == 0 ? "0" : ((double)CorrectChars / TotalTyped * 100).ToString("F1");
+
+	// Selection handled by property setters
+
+	int ComputeCorrect()
+	{
+		if (string.IsNullOrEmpty(Typed) || string.IsNullOrEmpty(DisplayCode)) return 0;
+		int cnt = 0;
+		var target = DisplayCode.Replace("\r\n","\n");
+		for (int i=0;i<Math.Min(target.Length, Typed.Length); i++) if (target[i]==Typed[i]) cnt++;
+		return cnt;
+	}
+
+	string RenderComparison()
+	{
+		var target = DisplayCode.Replace("\r\n","\n");
+		var sb = new StringBuilder();
+		int len = Math.Max(target.Length, Typed.Length);
+		for (int i=0;i<len;i++)
+		{
+			char tc = i < target.Length ? target[i] : '\0';
+			char uc = i < Typed.Length ? Typed[i] : '\0';
+			if (i < Typed.Length)
+			{
+				var c = System.Net.WebUtility.HtmlEncode(uc.ToString());
+				if (i < target.Length && uc==tc)
+				{
+					// inline style to avoid scoped-CSS mismatch
+					sb.Append($"<span style=\"color:{OkColor};opacity:0.75;\">{c}</span>");
+				}
+				else
+				{
+					sb.Append($"<span style=\"color:{NgColor};opacity:0.75;\">{c}</span>");
+				}
+			}
+			else
+			{
+				// show target remainder as muted
+				if (i < target.Length)
+				{
+					var c = System.Net.WebUtility.HtmlEncode(tc.ToString());
+					sb.Append($"<span style=\"color:{RemainColor};opacity:0.45;\">{c}</span>");
+				}
+			}
+		}
+		return sb.ToString();
+	}
+}
