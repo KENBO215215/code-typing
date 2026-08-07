@@ -11,6 +11,13 @@
     color: var(--accent, #89dceb);
     margin: 0;
 }
+.page-version {
+    font-size: 0.7rem;
+    font-weight: 400;
+    color: var(--text-muted, #6c7086);
+    vertical-align: middle;
+    margin-left: 4px;
+}
 .complete-badge {
     background: var(--ok, #a6e3a1);
     color: #1e1e2e;
