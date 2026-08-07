@@ -21,6 +21,76 @@
             return false;
         };
         document.documentElement.setAttribute('data-theme', 'dark');
+
+        window.htSetupTyping = function() {
+            if (window._htTypingCleanup) { window._htTypingCleanup(); window._htTypingCleanup = null; }
+
+            const ta = document.getElementById('type-textarea');
+            const overlay = document.getElementById('overlay');
+            const win = document.getElementById('type-window');
+            const kb = document.getElementById('onScreenKeyboard');
+
+            // スクロール同期
+            if (ta && overlay) {
+                const syncScroll = () => { overlay.scrollTop = ta.scrollTop; };
+                ta.addEventListener('scroll', syncScroll);
+                ta.addEventListener('input', syncScroll);
+            }
+
+            // クリックでフォーカス
+            if (win && ta) {
+                win.addEventListener('click', (e) => { if (e.target !== ta) ta.focus(); });
+            }
+
+            // ドラッグ
+            if (win) {
+                const handle = win.querySelector('.drag-handle');
+                if (handle) {
+                    let dragging=false, sx=0, sy=0, ox=0, oy=0;
+                    const md = (e) => { dragging=true; sx=e.clientX; sy=e.clientY; const r=win.getBoundingClientRect(); ox=r.left; oy=r.top; win.style.position='fixed'; win.style.zIndex=9999; e.preventDefault(); };
+                    const mm = (e) => { if(!dragging)return; win.style.left=(ox+e.clientX-sx)+'px'; win.style.top=(oy+e.clientY-sy)+'px'; };
+                    const mu = () => { dragging=false; };
+                    handle.addEventListener('mousedown', md);
+                    window.addEventListener('mousemove', mm);
+                    window.addEventListener('mouseup', mu);
+                }
+            }
+
+            // キーボードハイライト（毎回getElementById、documentキャプチャ）
+            const KEY_MAP = { ' ':'Space', 'Escape':'Esc', 'ArrowUp':'Up', 'ArrowDown':'Down', 'ArrowLeft':'Left', 'ArrowRight':'Right' };
+            const keyDown = (e) => {
+                const _kb = document.getElementById('onScreenKeyboard');
+                if (!_kb) return;
+                try {
+                    const k = KEY_MAP[e.key] || e.key;
+                    const el = _kb.querySelector('[data-key="'+k+'"]') || _kb.querySelector('[data-key="'+k.toLowerCase()+'"]');
+                    if (el) el.classList.add('active');
+                } catch(_) {}
+            };
+            const keyUp = () => {
+                const _kb = document.getElementById('onScreenKeyboard');
+                if (!_kb) return;
+                _kb.querySelectorAll('.key.active').forEach(el => el.classList.remove('active'));
+            };
+            document.addEventListener('keydown', keyDown, true);
+            document.addEventListener('keyup', keyUp, true);
+
+            // Ctrl+スクロールでフォントサイズ変更
+            let _fs = 13;
+            const wheelZoom = (e) => {
+                if (!e.ctrlKey) return;
+                e.preventDefault();
+                _fs = Math.max(9, Math.min(28, _fs + (e.deltaY < 0 ? 1 : -1)));
+                document.querySelectorAll('.code-block pre, #type-textarea, #overlay, .live-compare').forEach(el => { el.style.fontSize = _fs + 'px'; });
+            };
+            document.addEventListener('wheel', wheelZoom, { passive: false });
+
+            window._htTypingCleanup = () => {
+                document.removeEventListener('keydown', keyDown, true);
+                document.removeEventListener('keyup', keyUp, true);
+                document.removeEventListener('wheel', wheelZoom);
+            };
+        };
     </script>
 </head>
 

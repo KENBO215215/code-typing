@@ -37,110 +37,47 @@
                 <label>✅ <input type="color" @bind="OkColor" /></label>
                 <label>❌ <input type="color" @bind="NgColor" /></label>
                 <label>… <input type="color" @bind="RemainColor" /></label>
+                <label class="skip-toggle">
+                    <input type="checkbox" @bind="SkipComments" @bind:after="ResetTyping" />
+                    <span>コメントスキップ</span>
+                </label>
             </div>
 		</div>
 
-		<div class="code-block code-explain-grid">
-			<div class="code-col"><pre>@(DisplayCode)</pre></div>
-			<div class="explain-col">
-				@foreach(var ex in GetLineExplanations())
-				{
-					<div class="line-explain">@ex</div>
-				}
-			</div>
-		</div>
-		<div class="explain">
-			@foreach (var line in CurrentExplanations)
-			{
-				<div>@line</div>
-			}
+		@if (!string.IsNullOrEmpty(Snippets[SelectedId].Description))
+		{
+			<div class="algo-desc">@Snippets[SelectedId].Description</div>
+		}
+		<div class="code-block">
+			<pre>@((MarkupString)RenderDisplayCode())</pre>
 		</div>
 
 		<div class="sample-box">
-			<label>Paste your sample (will replace code when applied):</label>
-			<textarea @bind="SampleText" rows="6" placeholder="Paste code here..."></textarea>
-			<div>
-				<button @onclick="ApplySample">Use as sample</button>
-				<button @onclick="ClearSample" style="margin-left:8px">Clear sample</button>
-			</div>
+            <div class="sample-header" @onclick="() => sampleOpen = !sampleOpen">
+                <span>📋 カスタムコードを貼り付け</span>
+                <span class="sample-chevron">@(sampleOpen ? "▲" : "▼")</span>
+            </div>
+            @if (sampleOpen)
+            {
+                <div class="sample-body">
+                    <textarea @bind="SampleText" rows="7" placeholder="コードをここに貼り付け...&#10;（Ctrl+V で貼り付け後「使用する」を押す）" spellcheck="false" autocomplete="off"></textarea>
+                    <div class="sample-actions">
+                        <button @onclick="ApplySample">✓ 使用する</button>
+                        <button @onclick="ClearSample">✕ クリア</button>
+                    </div>
+                </div>
+            }
 		</div>
 	</div>
 
 	<div class="right">
 		<div id="type-window" class="type-window">
-			<div class="drag-handle">Type Window</div>
+			<div class="drag-handle"><span>⌨️ TYPE</span><span class="drag-hint">drag</span></div>
 			<div class="type-area" style="position:relative;">
 				<pre id="overlay" class="overlay">@((MarkupString)RenderComparison())</pre>
 				<textarea id="type-textarea" @bind="Typed" @bind:event="oninput" rows="15" placeholder="Type the code here..." spellcheck="false" autocapitalize="off" autocomplete="off"></textarea>
 			</div>
 		</div>
-@* Script for dragging the type-window *@
-<script>
-	(function(){
-		const win = document.getElementById('type-window');
-		if (!win) return;
-		const handle = win.querySelector('.drag-handle');
-		if (!handle) return;
-		let dragging = false, startX=0, startY=0, origX=0, origY=0;
-		handle.addEventListener('mousedown', (e)=>{
-			dragging = true; startX = e.clientX; startY = e.clientY;
-			const rect = win.getBoundingClientRect(); origX = rect.left; origY = rect.top;
-			win.style.position = 'absolute'; win.style.zIndex = 9999;
-			e.preventDefault();
-		});
-		window.addEventListener('mousemove', (e)=>{
-			if(!dragging) return;
-			const dx = e.clientX - startX; const dy = e.clientY - startY;
-			win.style.left = (origX + dx) + 'px'; win.style.top = (origY + dy) + 'px';
-		});
-		window.addEventListener('mouseup', ()=>{ dragging = false; });
-		// touch support
-		handle.addEventListener('touchstart', (e)=>{
-			const t = e.touches[0];
-			dragging = true; startX = t.clientX; startY = t.clientY;
-			const rect = win.getBoundingClientRect(); origX = rect.left; origY = rect.top;
-			win.style.position = 'absolute'; win.style.zIndex = 9999;
-			e.preventDefault();
-		}, {passive:false});
-		window.addEventListener('touchmove',(e)=>{
-			if(!dragging) return;
-			const t = e.touches[0];
-			const dx = t.clientX - startX; const dy = t.clientY - startY;
-			win.style.left = (origX + dx) + 'px'; win.style.top = (origY + dy) + 'px';
-		}, {passive:false});
-		window.addEventListener('touchend', ()=>{ dragging = false; });
-
-		// sync overlay scroll and focus handling
-		const ta = document.getElementById('type-textarea');
-		const overlay = document.getElementById('overlay');
-		if (ta && overlay) {
-			// sync on scroll/input
-			ta.addEventListener('scroll', ()=> { overlay.scrollTop = ta.scrollTop; });
-			ta.addEventListener('input', ()=> { overlay.scrollTop = ta.scrollTop; });
-			// composition events for IME: update overlay during composition
-			ta.addEventListener('compositionstart', ()=> { /* no-op: Blazor already updates oninput after compositionend */ });
-			ta.addEventListener('compositionend', ()=> { overlay.scrollTop = ta.scrollTop; });
-			// clicking the window focuses textarea
-			win.addEventListener('click', (e)=>{ if (e.target !== ta) { ta.focus(); } });
-		}
-		// keyboard highlighting
-		const kb = document.getElementById('onScreenKeyboard');
-		if (ta && kb) {
-			const keyDown = (e)=>{
-				const k = (e.key === ' ') ? 'Space' : e.key;
-				const el = kb.querySelector(`[data-key="${k}"]`) || kb.querySelector(`[data-key="${k.toLowerCase()}"]`);
-				if (el) el.classList.add('active');
-			};
-			const keyUp = (e)=>{
-				const k = (e.key === ' ') ? 'Space' : e.key;
-				const el = kb.querySelector(`[data-key="${k}"]`) || kb.querySelector(`[data-key="${k.toLowerCase()}"]`);
-				if (el) el.classList.remove('active');
-			};
-			window.addEventListener('keydown', keyDown);
-			window.addEventListener('keyup', keyUp);
-		}
-	})();
-</script>
 
 		<!-- On-screen keyboard: highlights keys while typing -->
 		<div class="on-screen-keyboard" id="onScreenKeyboard" aria-hidden="false">
@@ -275,11 +212,35 @@
 		}
 	}
 
-	string OkColor { get; set; } = "#2e7d32";
-	string NgColor { get; set; } = "#c62828";
-	string RemainColor { get; set; } = "#777777";
+	string OkColor { get; set; } = "#a6e3a1";
+	string NgColor { get; set; } = "#f38ba8";
+	string RemainColor { get; set; } = "#585b70";
 	string SampleText { get; set; } = string.Empty;
-	bool RequireTyping { get; set; } = false;
+	bool SkipComments { get; set; } = false;
+	bool sampleOpen = false;
+
+	bool IsCommentLine(string line) =>
+		selectedLang == 1 ? line.TrimStart().StartsWith("//") :
+		selectedLang == 2 ? line.TrimStart().StartsWith("#") : false;
+
+	string TypingTarget => SkipComments
+		? string.Join("\n", DisplayCode.Split('\n').Where(l => !IsCommentLine(l)))
+		: DisplayCode;
+
+	string RenderDisplayCode()
+	{
+		var sb = new StringBuilder();
+		var lines = DisplayCode.Split('\n');
+		foreach (var line in lines)
+		{
+			var enc = System.Net.WebUtility.HtmlEncode(line);
+			if (SkipComments && IsCommentLine(line))
+				sb.Append($"<span class=\"comment-dim\">{enc}</span>\n");
+			else
+				sb.Append(enc + "\n");
+		}
+		return sb.ToString().TrimEnd('\n');
+	}
 
 	// ── Score & Timer ──
 	DateTime? startTime;
@@ -288,17 +249,17 @@
 
 	double ElapsedSeconds => startTime.HasValue ? (DateTime.Now - startTime.Value).TotalSeconds : 0;
 	string Wpm => ElapsedSeconds > 1 ? ((int)((CorrectChars / 5.0) / (ElapsedSeconds / 60.0))).ToString() : "–";
-	bool IsComplete => _typed.Length > 0 && _typed.Replace("\r\n","\n") == DisplayCode.Replace("\r\n","\n");
+	bool IsComplete => _typed.Length > 0 && _typed.Replace("\r\n","\n") == TypingTarget.Replace("\r\n","\n");
 
 	int Score
 	{
 		get
 		{
 			if (TotalTyped == 0) return 0;
-			double acc = (double)CorrectChars / TotalTyped;
-			double prog = (double)CorrectChars / Math.Max(1, DisplayCode.Length);
+			double acc = (double)CorrectChars / Math.Max(1, TotalTyped);
 			double wpmVal = ElapsedSeconds > 1 ? (CorrectChars / 5.0) / (ElapsedSeconds / 60.0) : 0;
-			return (int)(CorrectChars * acc * 10 + wpmVal * 3 + (IsComplete ? 200 : 0));
+			// WPM × 正確率² で速さより正確さを重視。完了ボーナス 300
+			return (int)(wpmVal * acc * acc * 10 + (IsComplete ? 300 : 0));
 		}
 	}
 
@@ -325,7 +286,11 @@
 
 	protected override async Task OnAfterRenderAsync(bool firstRender)
 	{
-		if (firstRender) await LoadHiScoreAsync();
+		if (firstRender)
+		{
+			await LoadHiScoreAsync();
+			await JS.InvokeVoidAsync("htSetupTyping");
+		}
 	}
 
 	void ResetTyping()
@@ -342,6 +307,7 @@
 		public string CSharp { get; set; }
 		public string Python { get; set; }
 		public string[] Explanations { get; set; }
+		public string Description { get; set; } = "";
 	}
 
 	void ApplySample()
@@ -371,218 +337,163 @@
 		[1] = new Snippet
 		{
 			Title = "Binary Search",
-			CSharp = "int BinarySearch(int[] a, int target)\n{\n    int left = 0, right = a.Length - 1;\n    while (left <= right)\n    {\n        int mid = left + (right - left) / 2;\n        if (a[mid] == target) return mid;\n        if (a[mid] < target) left = mid + 1;\n        else right = mid - 1;\n    }\n    return -1;\n}",
-			Python = "def binary_search(a, target):\n    left, right = 0, len(a)-1\n    while left <= right:\n        mid = (left + right)//2\n        if a[mid] == target:\n            return mid\n        if a[mid] < target:\n            left = mid + 1\n        else:\n            right = mid - 1\n    return -1",
-			Explanations = new[] {
-				"関数宣言: 配列 a と検索対象 target を受け取る",
-				"関数本体の開始",
-				"探索範囲の左端と右端を初期化",
-				"while ループ: 範囲に要素が残る間継続",
-				"ループ本体開始",
-				"中間位置 mid を計算 (オーバーフロー対策で差分から計算)",
-				"見つかった場合はそのインデックスを返す",
-				"中間値より小さければ左側を右に移動",
-				"そうでなければ右側を左に移動",
-				"ループ終了",
-				"見つからなければ -1 を返す",
-				"関数終了"
-			}
-		},
-
-		[11] = new Snippet
-		{
-			Title = "Stack Push (LIFO)",
-			CSharp = "void Push(int value)\n{\n    if (top >= MAX_SIZE - 1) { /* overflow */ }\n    else { top = top + 1; stack[top] = value; }\n}",
-			Python = "def push(stack, value, top, MAX_SIZE):\n    if top >= MAX_SIZE - 1:\n        raise Exception('overflow')\n    else:\n        top += 1\n        stack[top] = value\n    return top",
-			Explanations = new[] {
-				"スタックの上位置 top を確認し容量超過ならエラー",
-				"そうでなければ top を1つ増やして値を格納",
-			}
-		},
-
-		[12] = new Snippet
-		{
-			Title = "Queue Dequeue (Ring Buffer)",
-			CSharp = "int Dequeue()\n{\n    if (head == tail) { /* empty */ return -1; }\n    else { var value = queue[head]; head = (head + 1) % MAX_SIZE; return value; }\n}",
-			Python = "def dequeue(queue, head, tail, MAX_SIZE):\n    if head == tail:\n        raise Exception('empty')\n    else:\n        value = queue[head]\n        head = (head + 1) % MAX_SIZE\n        return value, head",
-			Explanations = new[] {
-				"head と tail が等しければキューは空",
-				"先頭要素を取り出して head を循環インクリメント",
-			}
-		},
-
-		[13] = new Snippet
-		{
-			Title = "Linked List Traversal",
-			CSharp = "void Traverse(int start)\n{\n    int p = start;\n    while (p != NIL) { /* process node[p].value */ p = node[p].next; }\n}",
-			Python = "def traverse(start):\n    p = start\n    while p is not None:\n        # process node[p].value\n        p = node[p].next",
-			Explanations = new[] {
-				"始点 start を p にセット",
-				"p が空ポインタでない間 node[p] を処理し次へ移動",
-			}
-		},
-
-		[14] = new Snippet
-		{
-			Title = "Linear Search",
-			CSharp = "int LinearSearch(int[] a, int target)\n{\n    for (int i = 0; i < a.Length; i++) if (a[i] == target) return i; return -1;\n}",
-			Python = "def linear_search(a, target):\n    for i in range(len(a)):\n        if a[i] == target:\n            return i\n    return -1",
-			Explanations = new[] {
-				"先頭から順に target と比較",
-				"見つかればインデックスを返す、見つからなければ -1",
-			}
-		},
-
-		[15] = new Snippet
-		{
-			Title = "Binary Search (sorted)",
-			CSharp = "int BinarySearch(int[] a, int target)\n{\n    int low = 0, high = a.Length - 1;\n    while (low <= high) { int mid = (low + high) / 2; if (a[mid] == target) return mid; else if (a[mid] < target) low = mid + 1; else high = mid - 1; } return -1;\n}",
-			Python = "def binary_search(a, target):\n    low, high = 0, len(a)-1\n    while low <= high:\n        mid = (low + high)//2\n        if a[mid] == target: return mid\n        elif a[mid] < target: low = mid + 1\n        else: high = mid - 1\n    return -1",
-			Explanations = new[] {
-				"low と high で探索範囲を管理",
-				"mid を計算して比較し範囲を半分に絞る",
-				"見つかればインデックス、なければ -1",
-			}
-		},
-
-		[16] = new Snippet
-		{
-			Title = "Hash Search (Open Addressing)",
-			CSharp = "int HashSearch(int[] table, int key)\n{\n    int n = table.Length; int h = key % n; int i = 0;\n    while (table[(h + i) % n] != EMPTY) { if (table[(h + i) % n] == key) return (h + i) % n; i++; }\n    return -1;\n}",
-			Python = "def hash_search(table, key):\n    n = len(table)\n    h = key % n\n    i = 0\n    while table[(h + i) % n] is not None:\n        if table[(h + i) % n] == key:\n            return (h + i) % n\n        i += 1\n    return -1",
-			Explanations = new[] {
-				"初期ハッシュ h を計算",
-				"衝突時は線形探索で次のスロットを調べる",
-				"空スロットなら見つからないと判断",
-			}
-		},
-
-		[17] = new Snippet
-		{
-			Title = "GCD (Euclid, recursive)",
-			CSharp = "int Gcd(int x, int y) { if (y == 0) return x; else return Gcd(y, x % y); }",
-			Python = "def gcd(x, y):\n    if y == 0:\n        return x\n    else:\n        return gcd(y, x % y)",
-			Explanations = new[] {
-				"y が0なら x が最大公約数",
-				"そうでなければ再帰的に gcd(y, x mod y)",
-			}
-		},
-
-		[18] = new Snippet
-		{
-			Title = "Brute-force String Search",
-			CSharp = "int StrSearch(string text, string pat)\n{\n    for (int i = 0; i <= text.Length - pat.Length; i++) { int j = 0; while (j < pat.Length && text[i + j] == pat[j]) j++; if (j == pat.Length) return i; } return -1;\n}",
-			Python = "def str_search(text, pat):\n    for i in range(len(text) - len(pat) + 1):\n        j = 0\n        while j < len(pat) and text[i+j] == pat[j]:\n            j += 1\n        if j == len(pat):\n            return i\n    return -1",
-			Explanations = new[] {
-				"テキストの各開始位置でパターンと比較（力まかせ）",
-				"一致すれば開始位置を返す、なければ -1",
-			}
+			Description = "ソート済み配列を中央で分割しながら探索範囲を半分に絞る。計算量 O(log n)。前提: 配列がソート済みであること。left + (right-left)/2 でオーバーフローを防ぐ。",
+			CSharp = "// 【二分探索】ソート済み配列を O(log n) で検索\n// 引数: ソート済み配列 a、探索対象 target\nint BinarySearch(int[] a, int target)\n{\n    // 探索範囲の左端・右端を初期化\n    int left = 0, right = a.Length - 1;\n    // 範囲が残る間ループ継続\n    while (left <= right)\n    {\n        // オーバーフロー防止: (left+right)/2 ではなくこちら\n        int mid = left + (right - left) / 2;\n        // 中央が一致 → インデックスを返す\n        if (a[mid] == target) return mid;\n        // target が右側 → 左端を中央の右へ移動\n        if (a[mid] < target) left = mid + 1;\n        // target が左側 → 右端を中央の左へ移動\n        else right = mid - 1;\n    }\n    // 見つからなければ -1 を返す\n    return -1;\n}",
+			Python = "# 【二分探索】ソート済み配列を O(log n) で検索\n# 引数: ソート済み配列 a、探索対象 target\ndef binary_search(a, target):\n    # 探索範囲の左端・右端を初期化\n    left, right = 0, len(a)-1\n    # 範囲が残る間ループ継続\n    while left <= right:\n        # 中間位置を計算\n        mid = (left + right)//2\n        # 中央が一致 → インデックスを返す\n        if a[mid] == target:\n            return mid\n        # target が右側 → 左端を中央の右へ移動\n        if a[mid] < target:\n            left = mid + 1\n        # target が左側 → 右端を中央の左へ移動\n        else:\n            right = mid - 1\n    # 見つからなければ -1 を返す\n    return -1",
+			Explanations = new[] { "ソート済み配列を中央で分割して探索", "O(log n)" }
 		},
 
 		[2] = new Snippet
 		{
 			Title = "Merge Sort",
-			CSharp = "void MergeSort<T>(T[] a) where T : IComparable<T>\n{ /* ... */ }",
-			Python = "def merge_sort(a):\n    # ...\n    return a",
-			Explanations = new[] {
-				"関数宣言: ジェネリックな配列を受け取りソートする(型は比較可能であること)",
-				"関数本体: 再帰的に配列を分割してマージする実装の省略部",
-			}
+			Description = "配列を半分に分割して再帰的にソートし、2つのソート済み配列をマージする。計算量 O(n log n)、空間 O(n)。安定ソートで大規模データに適する。",
+			CSharp = "// 【マージソート】分割→再帰ソート→マージ O(n log n) 安定\nint[] MergeSort(int[] a)\n{\n    // 要素数1以下はすでに整列済み → ベースケース\n    if (a.Length <= 1) return a;\n    // 中間位置を計算\n    int mid = a.Length / 2;\n    // 左半分を再帰的にソート\n    int[] left = MergeSort(a[..mid]);\n    // 右半分を再帰的にソート\n    int[] right = MergeSort(a[mid..]);\n    // ソート済み2配列をマージして返す\n    return Merge(left, right);\n}\nint[] Merge(int[] l, int[] r)\n{\n    // 結果格納用の配列を用意\n    int[] res = new int[l.Length + r.Length];\n    int i = 0, j = 0, k = 0;\n    // 左右を比較しながら小さい方を結果に追加\n    while (i < l.Length && j < r.Length)\n        res[k++] = l[i] <= r[j] ? l[i++] : r[j++];\n    // 左側の残りを追加\n    while (i < l.Length) res[k++] = l[i++];\n    // 右側の残りを追加\n    while (j < r.Length) res[k++] = r[j++];\n    return res;\n}",
+			Python = "# 【マージソート】分割→再帰ソート→マージ O(n log n) 安定\ndef merge_sort(a):\n    # 要素数1以下はすでに整列済み → ベースケース\n    if len(a) <= 1:\n        return a\n    # 中間位置を計算\n    mid = len(a) // 2\n    # 左半分を再帰的にソート\n    left = merge_sort(a[:mid])\n    # 右半分を再帰的にソート\n    right = merge_sort(a[mid:])\n    # ソート済み2配列をマージして返す\n    return merge(left, right)\ndef merge(l, r):\n    res = []\n    i = j = 0\n    # 左右を比較しながら小さい方を結果に追加\n    while i < len(l) and j < len(r):\n        if l[i] <= r[j]:\n            res.append(l[i]); i += 1\n        else:\n            res.append(r[j]); j += 1\n    # 残りを追加して返す\n    return res + l[i:] + r[j:]",
+			Explanations = new[] { "分割して再帰ソート後マージ", "O(n log n) 安定" }
 		},
 
 		[3] = new Snippet
 		{
 			Title = "Quick Sort",
-			CSharp = "void QuickSort(int[] a,int lo,int hi) { /* ... */ }",
-			Python = "def quicksort(a, lo, hi):\n    # ...",
-			Explanations = new[] {
-				"関数宣言: 配列と範囲を受け取りクイックソートを実行",
-				"関数本体はピボットで分割して再帰的にソートする（省略）",
-			}
+			Description = "ピボット要素を基準に小さい/大きいに分割して再帰的にソート。平均 O(n log n)、最悪 O(n²)。in-place で動作し実用的に高速。ピボット選択で性能が変わる。",
+			CSharp = "// 【クイックソート】ピボット分割→再帰 平均 O(n log n)\nvoid QuickSort(int[] a, int lo, int hi)\n{\n    if (lo >= hi) return;\n    // ピボットで分割し位置を返す\n    int p = Partition(a, lo, hi);\n    QuickSort(a, lo, p - 1);\n    QuickSort(a, p + 1, hi);\n}\nint Partition(int[] a, int lo, int hi)\n{\n    // 末尾要素をピボットとして選択\n    int pivot = a[hi], i = lo;\n    for (int j = lo; j < hi; j++)\n        // pivot 以下なら左側グループへ交換\n        if (a[j] <= pivot) { (a[i], a[j]) = (a[j], a[i]); i++; }\n    // ピボットを正しい位置に置く\n    (a[i], a[hi]) = (a[hi], a[i]);\n    return i;\n}",
+			Python = "# 【クイックソート】ピボット分割→再帰 平均 O(n log n)\ndef quick_sort(a, lo, hi):\n    if lo >= hi:\n        return\n    # ピボットで分割し位置を返す\n    p = partition(a, lo, hi)\n    quick_sort(a, lo, p - 1)\n    quick_sort(a, p + 1, hi)\ndef partition(a, lo, hi):\n    # 末尾要素をピボットとして選択\n    pivot = a[hi]\n    i = lo\n    for j in range(lo, hi):\n        # pivot 以下なら左側グループへ交換\n        if a[j] <= pivot:\n            a[i], a[j] = a[j], a[i]\n            i += 1\n    # ピボットを正しい位置に置く\n    a[i], a[hi] = a[hi], a[i]\n    return i",
+			Explanations = new[] { "ピボット分割して再帰ソート", "平均 O(n log n)" }
 		},
 
 		[4] = new Snippet
 		{
 			Title = "Bubble Sort",
-			CSharp = "void BubbleSort(int[] a)\n{\n    for (int i = 0; i < a.Length; i++)\n        for (int j = 0; j + 1 < a.Length - i; j++)\n            if (a[j] > a[j+1]) { var t = a[j]; a[j]=a[j+1]; a[j+1]=t; }\n}",
-			Python = "def bubble_sort(a):\n    n = len(a)\n    for i in range(n):\n        for j in range(0, n-i-1):\n            if a[j] > a[j+1]:\n                a[j], a[j+1] = a[j+1], a[j]",
-			Explanations = new[] {
-				"外側ループで何度か走査",
-				"隣接要素を比較して交換 (バブル)",
-				"最悪 O(n^2) の計算量"
-			}
+			Description = "隣接する要素を比較して大きい方を後ろに移動するパスを繰り返す。計算量 O(n²)。実装が最もシンプル。各パスで1つの最大値が末尾に確定する。",
+			CSharp = "// 【バブルソート】隣接比較・交換を繰り返す O(n²)\nvoid BubbleSort(int[] a)\n{\n    // n 回パスを行う（毎回最大値が末尾に確定）\n    for (int i = 0; i < a.Length; i++)\n        // 各パスで末尾 i 個は確定済みなので範囲を縮小\n        for (int j = 0; j + 1 < a.Length - i; j++)\n            // 隣接要素が逆順なら交換\n            if (a[j] > a[j+1]) { var t = a[j]; a[j]=a[j+1]; a[j+1]=t; }\n}",
+			Python = "# 【バブルソート】隣接比較・交換を繰り返す O(n²)\ndef bubble_sort(a):\n    n = len(a)\n    # n 回パスを行う（毎回最大値が末尾に確定）\n    for i in range(n):\n        # 各パスで末尾 i 個は確定済みなので範囲を縮小\n        for j in range(0, n-i-1):\n            # 隣接要素が逆順なら交換\n            if a[j] > a[j+1]:\n                a[j], a[j+1] = a[j+1], a[j]",
+			Explanations = new[] { "隣接要素比較・交換", "O(n²)" }
 		},
 
 		[5] = new Snippet
 		{
 			Title = "Insertion Sort",
-			CSharp = "void InsertionSort(int[] a)\n{\n    for (int i = 1; i < a.Length; i++)\n    {\n        int key = a[i]; int j = i-1;\n        while (j >= 0 && a[j] > key) { a[j+1] = a[j]; j--; }\n        a[j+1] = key;\n    }\n}",
-			Python = "def insertion_sort(a):\n    for i in range(1, len(a)):\n        key = a[i]\n        j = i-1\n        while j >=0 and a[j] > key:\n            a[j+1] = a[j]\n            j -= 1\n        a[j+1] = key",
-			Explanations = new[] {
-				"未整列部分から1つずつ要素を取り出して挿入",
-				"挿入により左側は常に整列済み",
-				"計算量は O(n^2)（小規模で有効）"
-			}
+			Description = "左側を整列済みとして右から1要素ずつ取り出し適切な位置に挿入する。計算量 O(n²)。ほぼ整列済みデータに高速。安定ソート。小規模データや外部ライブラリでも内部で使われる。",
+			CSharp = "// 【挿入ソート】未整列部分から1要素ずつ適切位置に挿入 O(n²)\nvoid InsertionSort(int[] a)\n{\n    for (int i = 1; i < a.Length; i++)\n    {\n        // i 番目の要素を一時保存\n        int key = a[i]; int j = i-1;\n        // key より大きい要素を右にずらす\n        while (j >= 0 && a[j] > key) { a[j+1] = a[j]; j--; }\n        // 正しい位置に key を挿入\n        a[j+1] = key;\n    }\n}",
+			Python = "# 【挿入ソート】未整列部分から1要素ずつ適切位置に挿入 O(n²)\ndef insertion_sort(a):\n    for i in range(1, len(a)):\n        # i 番目の要素を一時保存\n        key = a[i]\n        j = i-1\n        # key より大きい要素を右にずらす\n        while j >= 0 and a[j] > key:\n            a[j+1] = a[j]\n            j -= 1\n        # 正しい位置に key を挿入\n        a[j+1] = key",
+			Explanations = new[] { "未整列から1要素ずつ挿入", "O(n²) 安定" }
 		},
 
 		[6] = new Snippet
 		{
 			Title = "DFS (Depth-First Search)",
-			CSharp = "void DFS(int v, List<int>[] g, bool[] seen)\n{\n    seen[v]=true;\n    foreach(var to in g[v]) if(!seen[to]) DFS(to,g,seen);\n}",
-			Python = "def dfs(v, g, seen):\n    seen[v]=True\n    for to in g[v]:\n        if not seen[to]:\n            dfs(to, g, seen)",
-			Explanations = new[] {
-				"ノード v を訪問済にする",
-				"隣接ノードを再帰で深く訪問する",
-				"再帰またはスタックで実装可能"
-			}
+			Description = "グラフの頂点から出発し、行けるだけ深く進んでから戻る探索。再帰またはスタックで実装。計算量 O(V+E)。連結成分判定・トポロジカルソートなどに利用。",
+			CSharp = "// 【深さ優先探索 DFS】深く潜って全頂点を訪問 O(V+E)\nvoid DFS(int v, List<int>[] g, bool[] seen)\n{\n    // 現在の頂点を訪問済みにする\n    seen[v]=true;\n    // 未訪問の隣接頂点を再帰的に訪問\n    foreach(var to in g[v]) if(!seen[to]) DFS(to,g,seen);\n}",
+			Python = "# 【深さ優先探索 DFS】深く潜って全頂点を訪問 O(V+E)\ndef dfs(v, g, seen):\n    # 現在の頂点を訪問済みにする\n    seen[v]=True\n    # 未訪問の隣接頂点を再帰的に訪問\n    for to in g[v]:\n        if not seen[to]:\n            dfs(to, g, seen)",
+			Explanations = new[] { "訪問済みマーク後に隣接を再帰訪問", "O(V+E)" }
 		},
 
 		[7] = new Snippet
 		{
 			Title = "BFS (Breadth-First Search)",
-			CSharp = "void BFS(int s, List<int>[] g)\n{\n    var q = new Queue<int>(); var seen = new bool[g.Length];\n    q.Enqueue(s); seen[s]=true;\n    while(q.Count>0){ var v=q.Dequeue(); foreach(var to in g[v]) if(!seen[to]){ seen[to]=true; q.Enqueue(to); } }\n}",
-			Python = "from collections import deque\ndef bfs(s, g):\n    q = deque([s])\n    seen = [False]*len(g)\n    seen[s]=True\n    while q:\n        v = q.popleft()\n        for to in g[v]:\n            if not seen[to]:\n                seen[to]=True\n                q.append(to)",
-			Explanations = new[] {
-				"スタートノードをキューに入れる",
-				"キューから取り出して隣接ノードを順に処理",
-				"レベル順に訪問でき最短距離にも利用可能"
-			}
+			Description = "スタートから距離1→2→3と近い頂点から順にキューで訪問する探索。計算量 O(V+E)。無重みグラフの最短距離計算に使える。レベル順の訪問が必要な問題に最適。",
+			CSharp = "// 【幅優先探索 BFS】近い頂点から順にキューで訪問 O(V+E)\nvoid BFS(int s, List<int>[] g)\n{\n    var q = new Queue<int>(); var seen = new bool[g.Length];\n    // スタート頂点をキューに追加\n    q.Enqueue(s); seen[s]=true;\n    while(q.Count>0){\n        var v=q.Dequeue();\n        // 未訪問の隣接頂点をキューに追加\n        foreach(var to in g[v]) if(!seen[to]){ seen[to]=true; q.Enqueue(to); }\n    }\n}",
+			Python = "# 【幅優先探索 BFS】近い頂点から順にキューで訪問 O(V+E)\nfrom collections import deque\ndef bfs(s, g):\n    seen = [False]*len(g)\n    # スタート頂点をキューに追加\n    seen[s]=True\n    q = deque([s])\n    while q:\n        v = q.popleft()\n        # 未訪問の隣接頂点をキューに追加\n        for to in g[v]:\n            if not seen[to]:\n                seen[to]=True\n                q.append(to)",
+			Explanations = new[] { "キューで近い頂点から順に訪問", "O(V+E)" }
 		},
 
 		[8] = new Snippet
 		{
 			Title = "Dijkstra",
-			CSharp = "void Dijkstra(int s, List<(int to,int w)>[] g, long[] dist)\n{\n    var pq = new SortedSet<(long v,int node)>();\n    for(int i=0;i<dist.Length;i++) dist[i]=long.MaxValue; dist[s]=0; pq.Add((0,s));\n    while(pq.Count>0){ var cur = pq.Min; pq.Remove(cur); long d=cur.v; int v=cur.node; if(d!=dist[v]) continue; foreach(var e in g[v]){ if(dist[e.to] > d + e.w){ dist[e.to]=d+e.w; pq.Add((dist[e.to], e.to)); } } }\n}",
-			Python = "import heapq\ndef dijkstra(s, g):\n    INF=10**18\n    dist=[INF]*len(g)\n    dist[s]=0\n    pq=[(0,s)]\n    while pq:\n        d,v = heapq.heappop(pq)\n        if d!=dist[v]: continue\n        for to,w in g[v]:\n            if dist[to] > d + w:\n                dist[to] = d + w\n                heapq.heappush(pq, (dist[to], to))\n    return dist",
-			Explanations = new[] {
-				"全頂点の距離を初期化（INF）",
-				"優先度付きキューで最短距離を拡張",
-				"辺の重みが非負である必要がある"
-			}
+			Description = "非負の重み付きグラフで始点から各頂点への最短距離を求める。優先度付きキューで最小距離の頂点から順に確定。計算量 O((V+E)log V)。負の辺がある場合は使えない（Bellman-Fordを使う）。",
+			CSharp = "// 【ダイクストラ法】非負重み付きグラフの単一始点最短経路 O((V+E)log V)\nvoid Dijkstra(int s, List<(int to,int w)>[] g, long[] dist)\n{\n    var pq = new SortedSet<(long d,int v)>();\n    // 全距離を無限大に初期化\n    for(int i=0;i<dist.Length;i++) dist[i]=long.MaxValue;\n    dist[s]=0; pq.Add((0,s));\n    while(pq.Count>0){\n        var cur=pq.Min; pq.Remove(cur);\n        long d=cur.d; int v=cur.v;\n        // 古い（更新済み）エントリはスキップ\n        if(d!=dist[v]) continue;\n        foreach(var e in g[v]){\n            // より短い経路が見つかればキューに追加\n            if(dist[e.to]>d+e.w){\n                dist[e.to]=d+e.w;\n                pq.Add((dist[e.to],e.to));\n            }\n        }\n    }\n}",
+			Python = "# 【ダイクストラ法】非負重み付きグラフの単一始点最短経路 O((V+E)log V)\nimport heapq\ndef dijkstra(s, g):\n    INF=10**18\n    dist=[INF]*len(g)\n    dist[s]=0\n    # 優先度付きキュー (距離, 頂点)\n    pq=[(0,s)]\n    while pq:\n        d,v=heapq.heappop(pq)\n        # 古いエントリはスキップ\n        if d!=dist[v]: continue\n        for to,w in g[v]:\n            # より短い経路が見つかればキューに追加\n            if dist[to]>d+w:\n                dist[to]=d+w\n                heapq.heappush(pq,(dist[to],to))\n    return dist",
+			Explanations = new[] { "優先度付きキューで最短距離を順次確定", "O((V+E)log V)" }
 		},
 
 		[9] = new Snippet
 		{
 			Title = "Kadane (Max Subarray)",
-			CSharp = "int Kadane(int[] a)\n{\n    int best = int.MinValue, cur = 0;\n    foreach(var x in a){ cur = Math.Max(x, cur + x); best = Math.Max(best, cur); }\n    return best;\n}",
-			Python = "def kadane(a):\n    best = -10**18\n    cur = 0\n    for x in a:\n        cur = max(x, cur + x)\n        best = max(best, cur)\n    return best",
-			Explanations = new[] {
-				"現在の部分和 cur を更新（拡張か開始か決定）",
-				"これまでの最大 best を保持",
-				"線形時間 O(n) で解ける"
-			}
+			Description = "配列の連続する部分配列の和の最大値を線形時間で求める動的計画法。cur は「現在位置で終わる最大部分和」で、継続か新規開始かを毎ステップ判断する。計算量 O(n)。",
+			CSharp = "// 【カダネ法】最大部分配列和を O(n) で求める DP\nint Kadane(int[] a)\n{\n    int best = int.MinValue, cur = 0;\n    foreach(var x in a){\n        // cur+x か x の大きい方 = 継続か新規開始か\n        cur = Math.Max(x, cur + x);\n        best = Math.Max(best, cur);\n    }\n    return best;\n}",
+			Python = "# 【カダネ法】最大部分配列和を O(n) で求める DP\ndef kadane(a):\n    best = -10**18\n    cur = 0\n    for x in a:\n        # cur+x か x の大きい方 = 継続か新規開始か\n        cur = max(x, cur + x)\n        best = max(best, cur)\n    return best",
+			Explanations = new[] { "継続か新規開始かを毎ステップ選択", "O(n)" }
 		},
 
 		[10] = new Snippet
 		{
 			Title = "Two-Pointer Pattern",
-			CSharp = "bool TwoSumSorted(int[] a, int target)\n{\n    int l=0,r=a.Length-1;\n    while(l<r){ int s=a[l]+a[r]; if(s==target) return true; if(s<target) l++; else r--; }\n    return false;\n}",
-			Python = "def two_sum_sorted(a, target):\n    l, r = 0, len(a)-1\n    while l < r:\n        s = a[l] + a[r]\n        if s == target: return True\n        if s < target: l += 1\n        else: r -= 1\n    return False",
-			Explanations = new[] {
-				"左右からポインタを動かして和を調べる",
-				"ソート済み配列で O(n) で解ける",
-				"2和の検出に有効"
-			}
+			Description = "ソート済み配列の左右両端にポインタを置き、和の大小に応じてポインタを動かして目標を探す。計算量 O(n)。2数の和問題・回文判定・スライディングウィンドウなどに応用できる。",
+			CSharp = "// 【二ポインタ法】両端から絞り込む O(n) ※ソート済み配列が前提\nbool TwoSumSorted(int[] a, int target)\n{\n    int l=0, r=a.Length-1;\n    while(l<r){\n        int s=a[l]+a[r];\n        if(s==target) return true;\n        // 和が小さければ左ポインタを右へ\n        if(s<target) l++;\n        // 和が大きければ右ポインタを左へ\n        else r--;\n    }\n    return false;\n}",
+			Python = "# 【二ポインタ法】両端から絞り込む O(n) ※ソート済み配列が前提\ndef two_sum_sorted(a, target):\n    l, r = 0, len(a)-1\n    while l < r:\n        s = a[l] + a[r]\n        if s == target: return True\n        # 和が小さければ左ポインタを右へ\n        if s < target: l += 1\n        # 和が大きければ右ポインタを左へ\n        else: r -= 1\n    return False",
+			Explanations = new[] { "両端ポインタで和を調整", "O(n)" }
+		},
+
+		[11] = new Snippet
+		{
+			Title = "Stack Push (LIFO)",
+			Description = "スタックはLIFO（後入れ先出し）構造。Push は top ポインタをインクリメントして要素を積む。容量を超えるとオーバーフロー。配列実装での Push/Pop は O(1)。",
+			CSharp = "// 【スタック Push】後入れ先出し LIFO への要素追加 O(1)\nvoid Push(int value)\n{\n    // 容量超過（オーバーフロー）チェック\n    if (top >= MAX_SIZE - 1) { /* overflow */ }\n    else { top = top + 1; stack[top] = value; }\n}",
+			Python = "# 【スタック Push】後入れ先出し LIFO への要素追加 O(1)\ndef push(stack, value, top, MAX_SIZE):\n    # 容量超過（オーバーフロー）チェック\n    if top >= MAX_SIZE - 1:\n        raise Exception('overflow')\n    else:\n        top += 1\n        stack[top] = value\n    return top",
+			Explanations = new[] { "top インクリメント後に値を格納", "O(1)" }
+		},
+
+		[12] = new Snippet
+		{
+			Title = "Queue Dequeue (Ring Buffer)",
+			Description = "キューはFIFO（先入れ先出し）構造。リングバッファ実装では % MAX_SIZE で循環させる。head==tail で空、(tail+1)%MAX_SIZE==head で満杯を判定。O(1) 操作。",
+			CSharp = "// 【キュー Dequeue】先入れ先出し FIFO からの取り出し O(1)\nint Dequeue()\n{\n    // head==tail ならキューは空\n    if (head == tail) { /* empty */ return -1; }\n    else {\n        var value = queue[head];\n        // head を循環インクリメント\n        head = (head + 1) % MAX_SIZE;\n        return value;\n    }\n}",
+			Python = "# 【キュー Dequeue】先入れ先出し FIFO からの取り出し O(1)\ndef dequeue(queue, head, tail, MAX_SIZE):\n    # head==tail ならキューは空\n    if head == tail:\n        raise Exception('empty')\n    else:\n        value = queue[head]\n        # head を循環インクリメント\n        head = (head + 1) % MAX_SIZE\n        return value, head",
+			Explanations = new[] { "head==tail で空判定、head を循環インクリメント", "O(1)" }
+		},
+
+		[13] = new Snippet
+		{
+			Title = "Linked List Traversal",
+			Description = "連結リストはノードが次のポインタを持つ動的データ構造。走査は先頭から末尾（NIL）まで順にポインタを辿る。計算量 O(n)。配列と違いランダムアクセスは O(n)。挿入・削除は O(1)。",
+			CSharp = "// 【連結リスト 走査】ポインタを辿って全ノードを処理 O(n)\n// 引数: 先頭ノードのインデックス start\nvoid Traverse(int start)\n{\n    // 現在ノードを先頭にセット\n    int p = start;\n    // NIL（番兵）に達するまで次のノードへ進む\n    while (p != NIL) { /* process node[p].value */ p = node[p].next; }\n}",
+			Python = "# 【連結リスト 走査】ポインタを辿って全ノードを処理 O(n)\n# 引数: 先頭ノード start\ndef traverse(start):\n    # 現在ノードを先頭にセット\n    p = start\n    # None に達するまで次のノードへ進む\n    while p is not None:\n        # process node[p].value\n        p = node[p].next",
+			Explanations = new[] { "NIL まで next を辿る", "O(n)" }
+		},
+
+		[14] = new Snippet
+		{
+			Title = "Linear Search",
+			Description = "配列の先頭から末尾まで順に比較して目標を探す最もシンプルな探索。計算量 O(n)。ソートされていないデータに使える。小規模データや1回限りの検索に適している。",
+			CSharp = "// 【線形探索】配列を先頭から順に調べる O(n)\n// 引数: 配列 a、探索対象 target\nint LinearSearch(int[] a, int target)\n{\n    // 全要素を先頭から順に比較\n    for (int i = 0; i < a.Length; i++)\n        // 一致したらインデックスを返す\n        if (a[i] == target) return i;\n    // 見つからなければ -1 を返す\n    return -1;\n}",
+			Python = "# 【線形探索】配列を先頭から順に調べる O(n)\n# 引数: 配列 a、探索対象 target\ndef linear_search(a, target):\n    # 全要素を先頭から順に比較\n    for i in range(len(a)):\n        # 一致したらインデックスを返す\n        if a[i] == target:\n            return i\n    # 見つからなければ -1 を返す\n    return -1",
+			Explanations = new[] { "先頭から順に全比較", "O(n)" }
+		},
+
+		[15] = new Snippet
+		{
+			Title = "Binary Search (試験形式)",
+			Description = "試験でよく出る low/high 変数名の二分探索。(low+high)/2 は整数オーバーフローの可能性があるが試験では一般的な書き方。前提: 配列がソート済みであること。O(log n)。",
+			CSharp = "// 【二分探索 試験形式】low/high 変数名 O(log n)\n// ※試験では (low+high)/2 が一般的\nint BinarySearch(int[] a, int target)\n{\n    int low = 0, high = a.Length - 1;\n    while (low <= high) {\n        int mid = (low + high) / 2;\n        if (a[mid] == target) return mid;\n        else if (a[mid] < target) low = mid + 1;\n        else high = mid - 1;\n    }\n    return -1;\n}",
+			Python = "# 【二分探索 試験形式】low/high 変数名 O(log n)\ndef binary_search(a, target):\n    low, high = 0, len(a)-1\n    while low <= high:\n        mid = (low + high)//2\n        if a[mid] == target: return mid\n        elif a[mid] < target: low = mid + 1\n        else: high = mid - 1\n    return -1",
+			Explanations = new[] { "試験形式の low/high 二分探索", "O(log n)" }
+		},
+
+		[16] = new Snippet
+		{
+			Title = "Hash Search (Open Addressing)",
+			Description = "除算法でハッシュ値を計算し、衝突時は線形探索（開番地法）で次のスロットを調べる。平均 O(1) だが最悪 O(n)。負荷率（使用率）が高いと性能が低下する。",
+			CSharp = "// 【ハッシュ探索 開番地法】衝突時に線形で次スロットを探す\nint HashSearch(int[] table, int key)\n{\n    int n = table.Length;\n    // 除算法でハッシュ値を計算\n    int h = key % n; int i = 0;\n    while (table[(h + i) % n] != EMPTY) {\n        if (table[(h + i) % n] == key) return (h + i) % n;\n        // 衝突: 次のスロットへ線形探索\n        i++;\n    }\n    return -1;\n}",
+			Python = "# 【ハッシュ探索 開番地法】衝突時に線形で次スロットを探す\ndef hash_search(table, key):\n    n = len(table)\n    # 除算法でハッシュ値を計算\n    h = key % n\n    i = 0\n    while table[(h + i) % n] is not None:\n        if table[(h + i) % n] == key:\n            return (h + i) % n\n        # 衝突: 次のスロットへ線形探索\n        i += 1\n    return -1",
+			Explanations = new[] { "除算法 + 衝突時線形探索", "平均 O(1)" }
+		},
+
+		[17] = new Snippet
+		{
+			Title = "GCD (Euclid, recursive)",
+			Description = "gcd(a,b) = gcd(b, a mod b) の性質を利用して再帰的に最大公約数を求める。計算量 O(log min(a,b))。最小公倍数 LCM は a*b/gcd(a,b) で求められる。",
+			CSharp = "// 【ユークリッドの互除法】最大公約数を再帰で求める O(log min(x,y))\nint Gcd(int x, int y)\n{\n    // y が 0 なら x が最大公約数\n    if (y == 0) return x;\n    // gcd(a,b) = gcd(b, a mod b) を再帰適用\n    else return Gcd(y, x % y);\n}",
+			Python = "# 【ユークリッドの互除法】最大公約数を再帰で求める O(log min(x,y))\ndef gcd(x, y):\n    # y が 0 なら x が最大公約数\n    if y == 0:\n        return x\n    # gcd(a,b) = gcd(b, a mod b) を再帰適用\n    else:\n        return gcd(y, x % y)",
+			Explanations = new[] { "y==0 が終了条件、再帰で gcd(y, x%y)", "O(log min)" }
+		},
+
+		[18] = new Snippet
+		{
+			Title = "Brute-force String Search",
+			Description = "テキストの各開始位置でパターンを先頭から順に照合する。計算量 O(nm)（n=テキスト長, m=パターン長）。実装は単純だが非効率。実用では KMP 法（O(n+m)）や BM 法が使われる。",
+			CSharp = "// 【力まかせ文字列照合】テキストの各位置でパターンを総当たり O(nm)\nint StrSearch(string text, string pat)\n{\n    for (int i = 0; i <= text.Length - pat.Length; i++) {\n        int j = 0;\n        // パターンの先頭から1文字ずつ照合\n        while (j < pat.Length && text[i + j] == pat[j]) j++;\n        // パターン全文字が一致したら開始位置を返す\n        if (j == pat.Length) return i;\n    }\n    return -1;\n}",
+			Python = "# 【力まかせ文字列照合】テキストの各位置でパターンを総当たり O(nm)\ndef str_search(text, pat):\n    for i in range(len(text) - len(pat) + 1):\n        j = 0\n        # パターンの先頭から1文字ずつ照合\n        while j < len(pat) and text[i+j] == pat[j]:\n            j += 1\n        # パターン全文字が一致したら開始位置を返す\n        if j == len(pat):\n            return i\n    return -1",
+			Explanations = new[] { "各開始位置で全文字照合", "O(nm)" }
 		},
 	};
 
@@ -612,16 +523,16 @@
 
 	int ComputeCorrect()
 	{
-		if (string.IsNullOrEmpty(Typed) || string.IsNullOrEmpty(DisplayCode)) return 0;
+		if (string.IsNullOrEmpty(Typed) || string.IsNullOrEmpty(TypingTarget)) return 0;
 		int cnt = 0;
-		var target = DisplayCode.Replace("\r\n","\n");
+		var target = TypingTarget.Replace("\r\n","\n");
 		for (int i=0;i<Math.Min(target.Length, Typed.Length); i++) if (target[i]==Typed[i]) cnt++;
 		return cnt;
 	}
 
 	string RenderComparison()
 	{
-		var target = DisplayCode.Replace("\r\n","\n");
+		var target = TypingTarget.Replace("\r\n","\n");
 		var sb = new StringBuilder();
 		int len = Math.Max(target.Length, Typed.Length);
 		for (int i=0;i<len;i++)
