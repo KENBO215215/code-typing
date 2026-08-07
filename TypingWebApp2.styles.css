@@ -187,6 +187,13 @@ main[b-on8cqnf239] {
     color: var(--accent, #89dceb);
     margin: 0;
 }
+.page-version[b-9vxif6glsk] {
+    font-size: 0.7rem;
+    font-weight: 400;
+    color: var(--text-muted, #6c7086);
+    vertical-align: middle;
+    margin-left: 4px;
+}
 .complete-badge[b-9vxif6glsk] {
     background: var(--ok, #a6e3a1);
     color: #1e1e2e;
