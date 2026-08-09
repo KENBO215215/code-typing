@@ -285,6 +285,11 @@ main[b-on8cqnf239] {
 }
 .sample-actions button:first-child[b-9vxif6glsk] { border-color: var(--accent, #89dceb); color: var(--accent, #89dceb); }
 
+/* ── Guide opacity slider ── */
+.guide-range[b-9vxif6glsk] { display: flex; align-items: center; gap: 5px; font-size: 0.78rem; color: var(--text-muted, #666); }
+.guide-range input[type="range"][b-9vxif6glsk] { width: 70px; accent-color: var(--accent, #89dceb); cursor: pointer; }
+.guide-pct[b-9vxif6glsk] { font-size: 0.7rem; min-width: 28px; }
+
 /* ── Skip comments toggle ── */
 .skip-toggle[b-9vxif6glsk] { display: flex; align-items: center; gap: 5px; cursor: pointer; font-size: 0.78rem; color: var(--text-muted, #666); }
 .skip-toggle input[b-9vxif6glsk] { accent-color: var(--accent, #89dceb); width: 13px; height: 13px; cursor: pointer; }
@@ -359,6 +364,12 @@ main[b-on8cqnf239] {
     box-shadow: 0 0 6px var(--accent, #89dceb);
     transform: scale(1.1);
     font-weight: 700;
+}
+.on-screen-keyboard .key.active-wrong[b-9vxif6glsk] {
+    background: #f38ba8;
+    border-color: #f38ba8;
+    color: #1e1e2e;
+    box-shadow: 0 0 6px #f38ba8;
 }
 .on-screen-keyboard .key.special[b-9vxif6glsk] { background: var(--surface2, #f0f0f0); }
 

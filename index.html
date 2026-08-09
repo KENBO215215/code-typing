@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Code Typing Practice</title>
     <base href="/code-typing/" />
-    <link href="_framework/dotnet.xdecize5ic.js" rel="preload" as="script" fetchpriority="high" crossorigin="anonymous" integrity="sha256-K04Z1L51KEXo0hPDlb8KNy/ZN+NhWhm6nntCyAMCxK8=" />
+    <link href="_framework/dotnet.v3talqmuym.js" rel="preload" as="script" fetchpriority="high" crossorigin="anonymous" integrity="sha256-JZGYvP2yhySLynVP7ar7arUpdbOrRdU9ryJelFMWT/s=" />
     <link rel="stylesheet" href="lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="css/app.css" />
     <link rel="icon" type="image/png" href="favicon.png" />
@@ -16,18 +16,18 @@
     "./_framework/blazor.webassembly.js": "./_framework/blazor.webassembly.958z1vx7fr.js",
     "./_framework/dotnet.native.js": "./_framework/dotnet.native.puryxhmhq9.js",
     "./_framework/dotnet.runtime.js": "./_framework/dotnet.runtime.web2r9gqbh.js",
-    "./_framework/dotnet.js": "./_framework/dotnet.xdecize5ic.js"
+    "./_framework/dotnet.js": "./_framework/dotnet.v3talqmuym.js"
   },
   "scopes": {},
   "integrity": {
     "./_framework/blazor.webassembly.958z1vx7fr.js": "sha256-A59Tr9HqEhHMu8kU7kruLI9ayw5MRS6Lvc6z7jCbghk=",
     "./_framework/blazor.webassembly.js": "sha256-A59Tr9HqEhHMu8kU7kruLI9ayw5MRS6Lvc6z7jCbghk=",
-    "./_framework/dotnet.js": "sha256-K04Z1L51KEXo0hPDlb8KNy/ZN+NhWhm6nntCyAMCxK8=",
+    "./_framework/dotnet.js": "sha256-JZGYvP2yhySLynVP7ar7arUpdbOrRdU9ryJelFMWT/s=",
     "./_framework/dotnet.native.js": "sha256-gQbHHzCnWx8iDOC65EKbql7bEltJkfao7lmkAbIRajw=",
     "./_framework/dotnet.native.puryxhmhq9.js": "sha256-gQbHHzCnWx8iDOC65EKbql7bEltJkfao7lmkAbIRajw=",
     "./_framework/dotnet.runtime.js": "sha256-SOUHEQ3FhDAibBSR2u90NWZpoBjPuWRmH0BAATUlhJU=",
     "./_framework/dotnet.runtime.web2r9gqbh.js": "sha256-SOUHEQ3FhDAibBSR2u90NWZpoBjPuWRmH0BAATUlhJU=",
-    "./_framework/dotnet.xdecize5ic.js": "sha256-K04Z1L51KEXo0hPDlb8KNy/ZN+NhWhm6nntCyAMCxK8="
+    "./_framework/dotnet.v3talqmuym.js": "sha256-JZGYvP2yhySLynVP7ar7arUpdbOrRdU9ryJelFMWT/s="
   }
 }</script>
     <script>
@@ -39,6 +39,8 @@
             return false;
         };
         document.documentElement.setAttribute('data-theme', 'dark');
+
+        window.htUpdateTarget = function(target) { window._htTarget = target; };
 
         window.htSetupTyping = function() {
             if (window._htTypingCleanup) { window._htTypingCleanup(); window._htTypingCleanup = null; }
@@ -88,10 +90,25 @@
             const keyUp = () => {
                 const _kb = document.getElementById('onScreenKeyboard');
                 if (!_kb) return;
-                _kb.querySelectorAll('.key.active').forEach(el => el.classList.remove('active'));
+                _kb.querySelectorAll('.key.active').forEach(el => { el.classList.remove('active'); el.classList.remove('active-wrong'); });
+            };
+            // 入力文字が正解かどうかをチェックしてキーボードを色分け
+            const onInput = () => {
+                const _ta = document.getElementById('type-textarea');
+                const _kb = document.getElementById('onScreenKeyboard');
+                if (!_ta || !_kb) return;
+                const target = window._htTarget || '';
+                const len = _ta.value.length;
+                if (len > 0 && len <= target.length) {
+                    const isWrong = _ta.value[len - 1] !== target[len - 1];
+                    _kb.querySelectorAll('.key.active').forEach(el => el.classList.toggle('active-wrong', isWrong));
+                } else {
+                    _kb.querySelectorAll('.key.active-wrong').forEach(el => el.classList.remove('active-wrong'));
+                }
             };
             document.addEventListener('keydown', keyDown, true);
             document.addEventListener('keyup', keyUp, true);
+            document.addEventListener('input', onInput, true);
 
             // Ctrl+スクロールでフォントサイズ変更
             let _fs = 13;
@@ -106,6 +123,7 @@
             window._htTypingCleanup = () => {
                 document.removeEventListener('keydown', keyDown, true);
                 document.removeEventListener('keyup', keyUp, true);
+                document.removeEventListener('input', onInput, true);
                 document.removeEventListener('wheel', wheelZoom);
             };
         };
