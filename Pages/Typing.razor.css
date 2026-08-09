@@ -109,6 +109,11 @@
 }
 .sample-actions button:first-child { border-color: var(--accent, #89dceb); color: var(--accent, #89dceb); }
 
+/* ── Guide opacity slider ── */
+.guide-range { display: flex; align-items: center; gap: 5px; font-size: 0.78rem; color: var(--text-muted, #666); }
+.guide-range input[type="range"] { width: 70px; accent-color: var(--accent, #89dceb); cursor: pointer; }
+.guide-pct { font-size: 0.7rem; min-width: 28px; }
+
 /* ── Skip comments toggle ── */
 .skip-toggle { display: flex; align-items: center; gap: 5px; cursor: pointer; font-size: 0.78rem; color: var(--text-muted, #666); }
 .skip-toggle input { accent-color: var(--accent, #89dceb); width: 13px; height: 13px; cursor: pointer; }
@@ -183,6 +188,12 @@
     box-shadow: 0 0 6px var(--accent, #89dceb);
     transform: scale(1.1);
     font-weight: 700;
+}
+.on-screen-keyboard .key.active-wrong {
+    background: #f38ba8;
+    border-color: #f38ba8;
+    color: #1e1e2e;
+    box-shadow: 0 0 6px #f38ba8;
 }
 .on-screen-keyboard .key.special { background: var(--surface2, #f0f0f0); }
 

@@ -22,6 +22,8 @@
         };
         document.documentElement.setAttribute('data-theme', 'dark');
 
+        window.htUpdateTarget = function(target) { window._htTarget = target; };
+
         window.htSetupTyping = function() {
             if (window._htTypingCleanup) { window._htTypingCleanup(); window._htTypingCleanup = null; }
 
@@ -70,10 +72,25 @@
             const keyUp = () => {
                 const _kb = document.getElementById('onScreenKeyboard');
                 if (!_kb) return;
-                _kb.querySelectorAll('.key.active').forEach(el => el.classList.remove('active'));
+                _kb.querySelectorAll('.key.active').forEach(el => { el.classList.remove('active'); el.classList.remove('active-wrong'); });
+            };
+            // 入力文字が正解かどうかをチェックしてキーボードを色分け
+            const onInput = () => {
+                const _ta = document.getElementById('type-textarea');
+                const _kb = document.getElementById('onScreenKeyboard');
+                if (!_ta || !_kb) return;
+                const target = window._htTarget || '';
+                const len = _ta.value.length;
+                if (len > 0 && len <= target.length) {
+                    const isWrong = _ta.value[len - 1] !== target[len - 1];
+                    _kb.querySelectorAll('.key.active').forEach(el => el.classList.toggle('active-wrong', isWrong));
+                } else {
+                    _kb.querySelectorAll('.key.active-wrong').forEach(el => el.classList.remove('active-wrong'));
+                }
             };
             document.addEventListener('keydown', keyDown, true);
             document.addEventListener('keyup', keyUp, true);
+            document.addEventListener('input', onInput, true);
 
             // Ctrl+スクロールでフォントサイズ変更
             let _fs = 13;
@@ -88,6 +105,7 @@
             window._htTypingCleanup = () => {
                 document.removeEventListener('keydown', keyDown, true);
                 document.removeEventListener('keyup', keyUp, true);
+                document.removeEventListener('input', onInput, true);
                 document.removeEventListener('wheel', wheelZoom);
             };
         };

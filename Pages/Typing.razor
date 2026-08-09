@@ -3,7 +3,7 @@
 @inject IJSRuntime JS
 
 <div class="page-header">
-    <h2 class="page-title">⌨️ Code Typing Practice <span class="page-version">v1.2</span></h2>
+    <h2 class="page-title">⌨️ Code Typing Practice <span class="page-version">v1.3</span></h2>
     @if (IsComplete)
     {
         <div class="complete-badge">✅ Complete!</div>
@@ -37,6 +37,9 @@
                 <label>✅ <input type="color" @bind="OkColor" /></label>
                 <label>❌ <input type="color" @bind="NgColor" /></label>
                 <label>… <input type="color" @bind="RemainColor" /></label>
+                <label class="guide-range">
+                    ガイド <input type="range" min="0.1" max="1.0" step="0.05" @bind="GuideOpacity" @bind:event="oninput" /> <span class="guide-pct">@((int)(GuideOpacity * 100))%</span>
+                </label>
                 <label class="skip-toggle">
                     <input type="checkbox" @bind="SkipComments" @bind:after="ResetTyping" />
                     <span>コメントスキップ</span>
@@ -215,6 +218,7 @@
 	string OkColor { get; set; } = "#a6e3a1";
 	string NgColor { get; set; } = "#f38ba8";
 	string RemainColor { get; set; } = "#585b70";
+	double GuideOpacity { get; set; } = 0.72;
 	string SampleText { get; set; } = string.Empty;
 	bool SkipComments { get; set; } = false;
 	bool sampleOpen = false;
@@ -290,6 +294,7 @@
 		{
 			await LoadHiScoreAsync();
 			await JS.InvokeVoidAsync("htSetupTyping");
+			await JS.InvokeVoidAsync("htUpdateTarget", TypingTarget);
 		}
 	}
 
@@ -299,6 +304,7 @@
 		startTime = null;
 		IsNewRecord = false;
 		_ = LoadHiScoreAsync();
+		_ = JS.InvokeVoidAsync("htUpdateTarget", TypingTarget);
 	}
 
 	class Snippet
@@ -558,7 +564,7 @@
 				if (i < target.Length)
 				{
 					var c = System.Net.WebUtility.HtmlEncode(tc.ToString());
-					sb.Append($"<span style=\"color:{RemainColor};opacity:0.45;\">{c}</span>");
+					sb.Append($"<span style=\"color:{RemainColor};opacity:{GuideOpacity:F2};\">{c}</span>");
 				}
 			}
 		}
