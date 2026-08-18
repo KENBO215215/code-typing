@@ -296,6 +296,9 @@
             };
             var done = typeInput.Length > 0 && typeInput == target;
             var progress = target.Length == 0 ? 0 : Math.Min(100, typeInput.Length * 100 / target.Length);
+            var romajiDisplay = !string.IsNullOrWhiteSpace(tp.Reading)
+                ? ToRomaji(tp.Reading) : ToRomaji(tp.Japanese);
+            var hasKanji = romajiDisplay.Any(c => c >= '一' && c <= '鿿');
 
             <div class="ll-type-ctrl">
                 <label>対象:</label>
@@ -313,10 +316,7 @@
                 @if (typeTarget == "en")
                 {
                     <div>🇯🇵 @tp.Japanese</div>
-                    @if (!string.IsNullOrWhiteSpace(tp.Reading))
-                    {
-                        <div class="ll-source-hint">読み: @tp.Reading</div>
-                    }
+                    <div class="ll-source-hint">@romajiDisplay</div>
                 }
                 else if (typeTarget == "ja_romaji")
                 {
@@ -325,11 +325,20 @@
                     {
                         <div class="ll-source-hint">読み: @tp.Reading</div>
                     }
+                    else if (hasKanji)
+                    {
+                        <div style="font-size:0.78rem;color:#f38ba8;margin-top:0.25rem;">
+                            ⚠️ 漢字が混在しています。「例文」タブで読み（ひらがな）を入力してください
+                        </div>
+                    }
                     <div style="margin-top:0.3rem;font-size:0.78rem;color:#585b70;">🇺🇸 @tp.English</div>
                 }
-                else
+                else  @* ja_raw *@
                 {
                     <div>🇺🇸 @tp.English</div>
+                    <div class="ll-source-hint" style="margin-top:0.3rem;">
+                        romaji: @romajiDisplay
+                    </div>
                 }
             </div>
 
@@ -506,7 +515,8 @@
 
     static HashSet<int> RandomHide(int n, int percent)
     {
-        var take = Math.Max(1, (int)Math.Ceiling(n * percent / 100.0));
+        if (n <= 1) return new();  // 1単語以下は隠さない（全消え防止）
+        var take = Math.Min(n - 1, (int)Math.Floor(n * percent / 100.0));  // 必ず1単語以上残す
         return new HashSet<int>(Enumerable.Range(0, n).OrderBy(_ => Random.Shared.Next()).Take(take));
     }
 
