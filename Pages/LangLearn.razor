@@ -96,20 +96,48 @@
            margin-bottom: 0.7rem; display: flex; align-items: center; gap: 0.8rem; }
 .ll-progress { height: 4px; background: #313244; border-radius: 2px; margin-bottom: 0.9rem; }
 .ll-progress-bar { height: 4px; background: #89b4fa; border-radius: 2px; transition: width .1s; }
+
+/* ── 文法タブ ── */
+.ll-grammar-list { display: flex; flex-direction: column; gap: 0.6rem; }
+.ll-gpoint { background: #1e1e2e; border-radius: 10px; overflow: hidden; }
+.ll-ghead { display: flex; align-items: center; gap: 1rem; padding: 0.85rem 1rem;
+            cursor: pointer; user-select: none; }
+.ll-ghead:hover { background: #252538; }
+.ll-gpattern { font-size: 1rem; color: #89b4fa; font-weight: 700; min-width: 8rem; }
+.ll-gmean { display: flex; flex-direction: column; gap: 0.05rem; }
+.ll-gmean-ja { font-size: 0.82rem; color: #cdd6f4; }
+.ll-gmean-en { font-size: 0.78rem; color: #9399b2; }
+.ll-gchev { margin-left: auto; color: #585b70; transition: transform .2s; }
+.ll-gchev.open { transform: rotate(180deg); }
+.ll-gbody { padding: 0 1rem 0.9rem; display: flex; flex-direction: column; gap: 0.45rem; }
+.ll-gex { background: #2d2d3f; border-radius: 7px; padding: 0.55rem 0.8rem;
+          display: flex; align-items: center; justify-content: space-between; gap: 0.7rem; }
+.ll-gex-texts { flex: 1; display: flex; flex-direction: column; gap: 0.1rem; }
+.ll-gex-ja { font-size: 0.92rem; color: #cdd6f4; }
+.ll-gex-reading { font-size: 0.76rem; color: #89b4fa; }
+.ll-gex-en { font-size: 0.8rem; color: #9399b2; }
+.ll-gex-add { background: #313244; border: none; color: #a6e3a1; border-radius: 5px;
+              cursor: pointer; padding: 0.25rem 0.65rem; font-size: 0.8rem; white-space: nowrap; }
+.ll-gex-add:hover { background: #45475a; }
+.ll-preset-btn { padding: 0.42rem 1rem; background: #313244; border: none;
+                 color: #f9e2af; border-radius: 7px; cursor: pointer; font-size: 0.85rem; margin-bottom: 1rem; }
+.ll-preset-btn:hover { background: #45475a; }
 </style>
 
 <div class="ll-wrap">
     <div class="ll-heading">📚 語学学習</div>
 
     <div class="ll-tabs">
-        <button class="ll-tab @(tab=="add"?"active":"")"   @onclick='()=>tab="add"'>📝 例文</button>
-        <button class="ll-tab @(tab=="study"?"active":"")" @onclick='()=>tab="study"'>📚 学習</button>
-        <button class="ll-tab @(tab=="type"?"active":"")"  @onclick='()=>tab="type"'>⌨ タイピング</button>
+        <button class="ll-tab @(tab=="add"?"active":"")"     @onclick='()=>tab="add"'>📝 例文</button>
+        <button class="ll-tab @(tab=="study"?"active":"")"   @onclick='()=>tab="study"'>📚 学習</button>
+        <button class="ll-tab @(tab=="type"?"active":"")"    @onclick='()=>tab="type"'>⌨ タイピング</button>
+        <button class="ll-tab @(tab=="grammar"?"active":"")" @onclick='()=>tab="grammar"'>📗 文法</button>
     </div>
 
     @* ─────────────── 例文タブ ─────────────── *@
     @if (tab == "add")
     {
+        <button class="ll-preset-btn" @onclick="LoadPresets">📥 基本例文を読み込む（N5レベル 20文）</button>
         <div class="ll-form">
             <span class="ll-form-label">🇯🇵 日本語（漢字OK）</span>
             <input class="ll-input" type="text" @bind="addJa" @bind:event="oninput"
@@ -337,6 +365,49 @@
             <button class="ll-sm-btn" @onclick="ResetType">↩ リセット</button>
         }
     }
+
+    @* ─────────────── 文法タブ ─────────────── *@
+    @if (tab == "grammar")
+    {
+        <div class="ll-grammar-list">
+            @for (int gi = 0; gi < GrammarList.Length; gi++)
+            {
+                var gp = GrammarList[gi];
+                var gIdx = gi;
+                var isOpen = openGrammar.Contains(gIdx);
+                <div class="ll-gpoint">
+                    <div class="ll-ghead" @onclick="() => ToggleGrammar(gIdx)">
+                        <span class="ll-gpattern">@gp.Pattern</span>
+                        <div class="ll-gmean">
+                            <span class="ll-gmean-ja">@gp.MeaningJa</span>
+                            <span class="ll-gmean-en">@gp.MeaningEn</span>
+                        </div>
+                        <span class="ll-gchev @(isOpen?"open":"")">▼</span>
+                    </div>
+                    @if (isOpen)
+                    {
+                        <div class="ll-gbody">
+                            @foreach (var ex in gp.Examples)
+                            {
+                                var exCopy = ex;
+                                <div class="ll-gex">
+                                    <div class="ll-gex-texts">
+                                        <span class="ll-gex-ja">🇯🇵 @ex.Japanese</span>
+                                        @if (!string.IsNullOrWhiteSpace(ex.Reading))
+                                        {
+                                            <span class="ll-gex-reading">@ex.Reading</span>
+                                        }
+                                        <span class="ll-gex-en">🇺🇸 @ex.English</span>
+                                    </div>
+                                    <button class="ll-gex-add" @onclick="() => AddFromGrammar(exCopy)">＋追加</button>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    }
 </div>
 
 @code {
@@ -454,6 +525,144 @@
         "ja_raw" => "日本語で入力（IME使用）...",
         _        => "ローマ字で入力... (e.g. watashi wa)"
     };
+
+    // ── 文法 ────────────────────────────────────────────────
+    record GrammarExample(string Japanese, string Reading, string English);
+    record GrammarPoint(string Pattern, string MeaningJa, string MeaningEn, GrammarExample[] Examples);
+
+    HashSet<int> openGrammar = new();
+    void ToggleGrammar(int i) { if (!openGrammar.Remove(i)) openGrammar.Add(i); }
+
+    async Task AddFromGrammar(GrammarExample ex)
+    {
+        if (pairs.Any(p => p.Japanese == ex.Japanese)) return;
+        pairs.Add(new SentencePair { Japanese = ex.Japanese, Reading = ex.Reading, English = ex.English });
+        studyPairs = new(pairs);
+        await Save();
+    }
+
+    static readonly GrammarPoint[] GrammarList =
+    [
+        new("〜は〜です",
+            "話題（は）＋断定（です）の基本文型",
+            "X is Y — basic sentence with topic marker",
+            [
+                new("わたしは がくせい です", "わたしは がくせい です", "I am a student"),
+                new("これは ほん です", "これは ほん です", "This is a book"),
+                new("かのじょは せんせい です", "かのじょは せんせい です", "She is a teacher"),
+            ]),
+        new("〜ます / 〜ません",
+            "動詞の丁寧形（肯定・否定）",
+            "Polite verb form (affirmative / negative)",
+            [
+                new("まいにち にほんご を べんきょう します", "まいにち にほんご を べんきょう します", "I study Japanese every day"),
+                new("おさけは のみません", "おさけは のみません", "I don't drink alcohol"),
+                new("あさ ごはんを たべます", "あさ ごはんを たべます", "I eat breakfast in the morning"),
+            ]),
+        new("〜ました / 〜ませんでした",
+            "動詞の丁寧過去形（肯定・否定）",
+            "Polite past tense (affirmative / negative)",
+            [
+                new("きのう えいがを みました", "きのう えいがを みました", "I watched a movie yesterday"),
+                new("しゅくだいを しませんでした", "しゅくだいを しませんでした", "I didn't do my homework"),
+                new("ともだちに あいました", "ともだちに あいました", "I met a friend"),
+            ]),
+        new("〜たいです",
+            "「〜したい」＝～したいという願望を表す",
+            "Want to do ~ (desire/wish)",
+            [
+                new("にほんに いきたい です", "にほんに いきたい です", "I want to go to Japan"),
+                new("すしを たべたい です", "すしを たべたい です", "I want to eat sushi"),
+                new("にほんごが じょうずに なりたい です", "にほんごが じょうずに なりたい です", "I want to become good at Japanese"),
+            ]),
+        new("〜てください",
+            "「〜して」＋「ください」＝依頼・指示を表す",
+            "Please do ~ (polite request)",
+            [
+                new("ゆっくり はなして ください", "ゆっくり はなして ください", "Please speak slowly"),
+                new("もう いちど いって ください", "もう いちど いって ください", "Please say that again"),
+                new("ここに なまえを かいて ください", "ここに なまえを かいて ください", "Please write your name here"),
+            ]),
+        new("〜ています",
+            "現在進行・状態の継続を表す",
+            "Currently doing ~ / ongoing state",
+            [
+                new("いま べんきょう しています", "いま べんきょう しています", "I am studying now"),
+                new("にほんに すんでいます", "にほんに すんでいます", "I live in Japan"),
+                new("あめが ふっています", "あめが ふっています", "It is raining"),
+            ]),
+        new("〜が好き / 嫌い / 得意",
+            "好み・感情・得手不得手を表す",
+            "Like / dislike / be good at ~",
+            [
+                new("にほんごが すきです", "にほんごが すきです", "I like Japanese"),
+                new("からい たべものが きらいです", "からい たべものが きらいです", "I dislike spicy food"),
+                new("えいごが とくいです", "えいごが とくいです", "I am good at English"),
+            ]),
+        new("〜も",
+            "「〜も」＝「〜も（また・さらに）」同様の事柄を追加",
+            "Also / too — adding similar information",
+            [
+                new("わたしも にほんごを べんきょうしています", "わたしも にほんごを べんきょうしています", "I am also studying Japanese"),
+                new("これも ください", "これも ください", "Please give me this one too"),
+                new("かれも がくせい です", "かれも がくせい です", "He is also a student"),
+            ]),
+        new("〜から（理由）",
+            "「〜から」＝「〜なので・〜だから」理由を表す",
+            "Because ~ / Since ~ (reason)",
+            [
+                new("すきだから まいにち れんしゅう します", "すきだから まいにち れんしゅう します", "I practice every day because I like it"),
+                new("たかいから かいません", "たかいから かいません", "I won't buy it because it's expensive"),
+                new("つかれたから はやく ねます", "つかれたから はやく ねます", "I'll sleep early because I'm tired"),
+            ]),
+        new("〜てもいいですか",
+            "「〜していいですか」＝許可を求める表現",
+            "May I ~? / Is it okay to ~? (asking permission)",
+            [
+                new("しゃしんを とっても いいですか", "しゃしんを とっても いいですか", "May I take a photo?"),
+                new("ここに すわっても いいですか", "ここに すわっても いいですか", "May I sit here?"),
+                new("まどを あけても いいですか", "まどを あけても いいですか", "May I open the window?"),
+            ]),
+    ];
+
+    // ── 基本例文プリセット ──────────────────────────────────
+    static readonly SentencePair[] PresetSentences =
+    [
+        new() { Japanese="はじめまして", Reading="はじめまして", English="Nice to meet you" },
+        new() { Japanese="よろしく おねがいします", Reading="よろしく おねがいします", English="Please take care of me / Pleased to meet you" },
+        new() { Japanese="ありがとう ございます", Reading="ありがとう ございます", English="Thank you very much" },
+        new() { Japanese="すみません", Reading="すみません", English="Excuse me / I'm sorry" },
+        new() { Japanese="わかりました", Reading="わかりました", English="I understand / Got it" },
+        new() { Japanese="わかりません", Reading="わかりません", English="I don't understand" },
+        new() { Japanese="もう いちど いって ください", Reading="もう いちど いって ください", English="Please say that again" },
+        new() { Japanese="ゆっくり はなして ください", Reading="ゆっくり はなして ください", English="Please speak slowly" },
+        new() { Japanese="にほんごが すこし はなせます", Reading="にほんごが すこし はなせます", English="I can speak a little Japanese" },
+        new() { Japanese="えいごが わかりますか", Reading="えいごが わかりますか", English="Do you understand English?" },
+        new() { Japanese="これは いくら ですか", Reading="これは いくら ですか", English="How much is this?" },
+        new() { Japanese="えきは どこ ですか", Reading="えきは どこ ですか", English="Where is the station?" },
+        new() { Japanese="トイレは どこ ですか", Reading="トイレは どこ ですか", English="Where is the bathroom?" },
+        new() { Japanese="なんじ ですか", Reading="なんじ ですか", English="What time is it?" },
+        new() { Japanese="きょうは いい てんき ですね", Reading="きょうは いい てんき ですね", English="The weather is nice today, isn't it?" },
+        new() { Japanese="いっしょに いきませんか", Reading="いっしょに いきませんか", English="Would you like to go together?" },
+        new() { Japanese="にほんりょうりが すきです", Reading="にほんりょうりが すきです", English="I like Japanese food" },
+        new() { Japanese="これを ください", Reading="これを ください", English="Please give me this" },
+        new() { Japanese="おねがいします", Reading="おねがいします", English="Please / I request your help" },
+        new() { Japanese="またあした", Reading="またあした", English="See you tomorrow" },
+    ];
+
+    async Task LoadPresets()
+    {
+        var added = 0;
+        foreach (var p in PresetSentences)
+        {
+            if (!pairs.Any(x => x.Japanese == p.Japanese))
+            {
+                pairs.Add(new SentencePair { Japanese = p.Japanese, Reading = p.Reading, English = p.English });
+                added++;
+            }
+        }
+        if (added > 0) { studyPairs = new(pairs); await Save(); }
+    }
 
     // ── ローマ字変換 ─────────────────────────────────────────
     static readonly Dictionary<string, string> KR = new()
