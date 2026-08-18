@@ -72,7 +72,16 @@
             const keyUp = () => {
                 const _kb = document.getElementById('onScreenKeyboard');
                 if (!_kb) return;
-                _kb.querySelectorAll('.key.active').forEach(el => { el.classList.remove('active'); el.classList.remove('active-wrong'); });
+                _kb.querySelectorAll('.key.active').forEach(el => {
+                    const wasWrong = el.classList.contains('active-wrong');
+                    el.classList.remove('active', 'active-wrong');
+                    if (wasWrong) {
+                        el.classList.remove('flash-wrong');
+                        void el.offsetWidth;
+                        el.classList.add('flash-wrong');
+                        el.addEventListener('animationend', () => el.classList.remove('flash-wrong'), { once: true });
+                    }
+                });
             };
             // 入力文字が正解かどうかをチェックしてキーボードを色分け
             const onInput = () => {

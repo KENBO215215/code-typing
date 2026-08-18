@@ -1,0 +1,506 @@
+@page "/lang"
+@inject IJSRuntime JS
+@using System.Text
+@using System.Text.Json
+
+<PageTitle>語学学習</PageTitle>
+
+<style>
+.ll-wrap { max-width: 720px; margin: 0 auto; padding: 1.2rem 1rem; }
+.ll-heading { font-size: 1.3rem; font-weight: 700; margin-bottom: 1rem; color: #cdd6f4; }
+
+.ll-tabs { display: flex; gap: 0.5rem; margin-bottom: 1.4rem; }
+.ll-tab { padding: 0.45rem 1.1rem; border-radius: 7px; border: none; cursor: pointer;
+          background: #313244; color: #9399b2; font-size: 0.9rem; transition: all .15s; }
+.ll-tab.active { background: #89b4fa; color: #1e1e2e; font-weight: 700; }
+.ll-tab:hover:not(.active) { background: #45475a; color: #cdd6f4; }
+
+/* ── 例文タブ ── */
+.ll-form { display: flex; flex-direction: column; gap: 0.55rem; background: #1e1e2e;
+           padding: 1rem 1.2rem; border-radius: 10px; margin-bottom: 1.2rem; }
+.ll-form-label { font-size: 0.78rem; color: #9399b2; }
+.ll-input { padding: 0.5rem 0.75rem; border-radius: 7px; border: 1px solid #45475a;
+            background: #2d2d3f; color: #cdd6f4; font-size: 0.95rem; width: 100%; box-sizing: border-box; }
+.ll-input:focus { outline: none; border-color: #89b4fa; }
+.ll-add-btn { align-self: flex-start; padding: 0.45rem 1.3rem; background: #a6e3a1;
+              color: #1e1e2e; border: none; border-radius: 7px; cursor: pointer; font-weight: 700; }
+.ll-add-btn:disabled { opacity: 0.35; cursor: default; }
+.ll-hint { font-size: 0.75rem; color: #585b70; margin-top: 0.15rem; }
+
+.ll-list { display: flex; flex-direction: column; gap: 0.45rem; }
+.ll-item { display: flex; align-items: center; gap: 0.7rem; background: #1e1e2e;
+           padding: 0.65rem 0.9rem; border-radius: 8px; }
+.ll-item-texts { flex: 1; display: flex; flex-direction: column; gap: 0.1rem; }
+.ll-item-ja { font-size: 0.95rem; color: #cdd6f4; }
+.ll-item-en { font-size: 0.82rem; color: #9399b2; }
+.ll-del-btn { background: none; border: none; color: #f38ba8; cursor: pointer;
+              font-size: 1rem; padding: 0.2rem 0.5rem; border-radius: 5px; }
+.ll-del-btn:hover { background: #302030; }
+.ll-empty { color: #585b70; text-align: center; padding: 2.5rem; }
+
+/* ── 学習タブ ── */
+.ll-nav { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; margin-bottom: 0.9rem; }
+.ll-nav-btn { padding: 0.35rem 0.9rem; background: #313244; border: none;
+              color: #cdd6f4; border-radius: 6px; cursor: pointer; }
+.ll-nav-btn:disabled { opacity: 0.35; cursor: default; }
+.ll-count { font-size: 0.88rem; color: #9399b2; }
+.ll-sm-btn { padding: 0.32rem 0.85rem; background: #313244; border: none;
+             color: #9399b2; border-radius: 6px; cursor: pointer; font-size: 0.82rem; }
+.ll-sm-btn:hover { background: #45475a; color: #cdd6f4; }
+
+.ll-toggles { display: flex; gap: 1.2rem; margin-bottom: 0.7rem; }
+.ll-toggle-label { display: flex; align-items: center; gap: 0.4rem; font-size: 0.85rem;
+                   color: #cdd6f4; cursor: pointer; user-select: none; }
+
+.ll-cloze-row { display: flex; gap: 0.6rem; margin-bottom: 1.1rem; }
+
+.ll-card { background: #1e1e2e; border-radius: 12px; padding: 1.3rem 1.5rem;
+           display: flex; flex-direction: column; gap: 1.3rem; }
+.ll-section { display: flex; flex-direction: column; gap: 0.45rem; }
+.ll-section-label { font-size: 0.73rem; color: #6c7086; text-transform: uppercase;
+                    letter-spacing: 0.07em; }
+.ll-text { font-size: 1.15rem; line-height: 1.8; color: #cdd6f4; flex-wrap: wrap;
+           display: flex; align-items: center; gap: 0.35rem; }
+.ll-reveal-btn { align-self: flex-start; padding: 0.4rem 1rem; background: #313244;
+                 border: none; color: #9399b2; border-radius: 7px; cursor: pointer; }
+.ll-reveal-btn:hover { background: #45475a; }
+.ll-cloze-blank { background: #313244; border: none; border-radius: 4px; padding: 0.1rem 0.7rem;
+                  color: transparent; cursor: pointer; font-size: 1rem; min-width: 3rem; }
+.ll-cloze-blank:hover { color: #89b4fa; background: #45475a; }
+.ll-word { }
+
+/* ── タイピングタブ ── */
+.ll-type-ctrl { display: flex; align-items: center; gap: 0.7rem; flex-wrap: wrap;
+                margin-bottom: 1rem; }
+.ll-type-ctrl label { font-size: 0.82rem; color: #9399b2; }
+.ll-select { padding: 0.4rem 0.65rem; background: #2d2d3f; color: #cdd6f4;
+             border: 1px solid #45475a; border-radius: 7px; font-size: 0.88rem; }
+.ll-source { background: #1e1e2e; padding: 0.7rem 1rem; border-radius: 8px;
+             margin-bottom: 0.8rem; font-size: 1rem; color: #a6e3a1; }
+.ll-source-hint { font-size: 0.78rem; color: #585b70; margin-top: 0.2rem; }
+.ll-target { font-size: 1.4rem; letter-spacing: 0.06em; line-height: 2;
+             background: #1e1e2e; padding: 0.9rem 1.1rem; border-radius: 10px;
+             margin-bottom: 0.8rem; font-family: "Consolas", "Courier New", monospace;
+             min-height: 4rem; flex-wrap: wrap; display: flex; align-items: flex-start; }
+.tc-ok { color: #a6e3a1; }
+.tc-ng { color: #f38ba8; text-decoration: underline; }
+.tc-cur { background: #89b4fa44; border-bottom: 2px solid #89b4fa; color: #cdd6f4; }
+.tc-rest { color: #45475a; }
+.ll-type-input { width: 100%; padding: 0.65rem 1rem; font-size: 1rem;
+                 background: #2d2d3f; border: 1px solid #45475a; border-radius: 8px;
+                 color: #cdd6f4; box-sizing: border-box; margin-bottom: 0.7rem; }
+.ll-type-input:focus { outline: none; border-color: #89b4fa; }
+.ll-type-input:disabled { opacity: 0.5; }
+.ll-done { color: #a6e3a1; font-size: 1.05rem; font-weight: 700;
+           margin-bottom: 0.7rem; display: flex; align-items: center; gap: 0.8rem; }
+.ll-progress { height: 4px; background: #313244; border-radius: 2px; margin-bottom: 0.9rem; }
+.ll-progress-bar { height: 4px; background: #89b4fa; border-radius: 2px; transition: width .1s; }
+</style>
+
+<div class="ll-wrap">
+    <div class="ll-heading">📚 語学学習</div>
+
+    <div class="ll-tabs">
+        <button class="ll-tab @(tab=="add"?"active":"")"   @onclick='()=>tab="add"'>📝 例文</button>
+        <button class="ll-tab @(tab=="study"?"active":"")" @onclick='()=>tab="study"'>📚 学習</button>
+        <button class="ll-tab @(tab=="type"?"active":"")"  @onclick='()=>tab="type"'>⌨ タイピング</button>
+    </div>
+
+    @* ─────────────── 例文タブ ─────────────── *@
+    @if (tab == "add")
+    {
+        <div class="ll-form">
+            <span class="ll-form-label">🇯🇵 日本語</span>
+            <input class="ll-input" type="text" @bind="addJa" @bind:event="oninput"
+                   placeholder="例：わたしは がくせい です" @onkeydown="OnAddKey" />
+            <span class="ll-hint">ひらがなで書くとローマ字タイピングに使えます（単語はスペース区切り）</span>
+            <span class="ll-form-label">🇺🇸 English</span>
+            <input class="ll-input" type="text" @bind="addEn" @bind:event="oninput"
+                   placeholder="I am a student" @onkeydown="OnAddKey" />
+            <button class="ll-add-btn" @onclick="AddPair"
+                    disabled="@(string.IsNullOrWhiteSpace(addJa) && string.IsNullOrWhiteSpace(addEn))">
+                ➕ 追加
+            </button>
+        </div>
+
+        @if (pairs.Count == 0)
+        {
+            <p class="ll-empty">まだ例文がありません</p>
+        }
+        else
+        {
+            <div class="ll-list">
+                @for (int i = 0; i < pairs.Count; i++)
+                {
+                    var p = pairs[i];
+                    var idx = i;
+                    <div class="ll-item">
+                        <div class="ll-item-texts">
+                            <span class="ll-item-ja">@p.Japanese</span>
+                            <span class="ll-item-en">@p.English</span>
+                        </div>
+                        <button class="ll-del-btn" @onclick="() => DeletePair(idx)">✕</button>
+                    </div>
+                }
+            </div>
+        }
+    }
+
+    @* ─────────────── 学習タブ ─────────────── *@
+    @if (tab == "study")
+    {
+        @if (pairs.Count == 0)
+        {
+            <p class="ll-empty">📝 まず「例文」タブで例文を追加してください</p>
+        }
+        else
+        {
+            var sp = studyPairs[studyIdx];
+            <div class="ll-nav">
+                <button class="ll-nav-btn" @onclick="StudyPrev" disabled="@(studyIdx==0)">◀</button>
+                <span class="ll-count">@(studyIdx+1) / @studyPairs.Count</span>
+                <button class="ll-nav-btn" @onclick="StudyNext" disabled="@(studyIdx==studyPairs.Count-1)">▶</button>
+                <button class="ll-sm-btn" @onclick="Shuffle">🔀 シャッフル</button>
+            </div>
+
+            <div class="ll-toggles">
+                <label class="ll-toggle-label">
+                    <input type="checkbox" @bind="hideJa" /> 日本語を隠す
+                </label>
+                <label class="ll-toggle-label">
+                    <input type="checkbox" @bind="hideEn" /> 英語を隠す
+                </label>
+            </div>
+
+            <div class="ll-cloze-row">
+                <button class="ll-sm-btn" @onclick="DoCloze">🎲 単語をランダムに隠す</button>
+                <button class="ll-sm-btn" @onclick="ClearCloze">↩ リセット</button>
+            </div>
+
+            <div class="ll-card">
+                <div class="ll-section">
+                    <span class="ll-section-label">🇯🇵 日本語</span>
+                    @if (hideJa)
+                    {
+                        <button class="ll-reveal-btn" @onclick="() => hideJa = false">👁 表示</button>
+                    }
+                    else
+                    {
+                        <div class="ll-text">
+                            @foreach (var item in SplitWords(sp.Japanese, clozeJa))
+                            {
+                                var wi = item.Idx;
+                                @if (item.Hidden)
+                                {
+                                    <button class="ll-cloze-blank" @onclick="() => clozeJa.Remove(wi)">▓▓▓</button>
+                                }
+                                else
+                                {
+                                    <span class="ll-word">@item.Word</span>
+                                }
+                            }
+                        </div>
+                    }
+                </div>
+
+                <div class="ll-section">
+                    <span class="ll-section-label">🇺🇸 English</span>
+                    @if (hideEn)
+                    {
+                        <button class="ll-reveal-btn" @onclick="() => hideEn = false">👁 Show</button>
+                    }
+                    else
+                    {
+                        <div class="ll-text">
+                            @foreach (var item in SplitWords(sp.English, clozeEn))
+                            {
+                                var wi = item.Idx;
+                                @if (item.Hidden)
+                                {
+                                    <button class="ll-cloze-blank" @onclick="() => clozeEn.Remove(wi)">▓▓▓</button>
+                                }
+                                else
+                                {
+                                    <span class="ll-word">@item.Word</span>
+                                }
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+    }
+
+    @* ─────────────── タイピングタブ ─────────────── *@
+    @if (tab == "type")
+    {
+        @if (pairs.Count == 0)
+        {
+            <p class="ll-empty">📝 まず「例文」タブで例文を追加してください</p>
+        }
+        else
+        {
+            var tp = pairs[typeIdx];
+            var target = typeTarget switch
+            {
+                "en"     => tp.English,
+                "ja_raw" => tp.Japanese,
+                _        => ToRomaji(tp.Japanese)
+            };
+            var done = typeInput.Length > 0 && typeInput == target;
+            var progress = target.Length == 0 ? 0 : Math.Min(100, typeInput.Length * 100 / target.Length);
+
+            <div class="ll-type-ctrl">
+                <label>対象:</label>
+                <select class="ll-select" @bind="typeTarget" @bind:after="ResetType">
+                    <option value="ja_romaji">🇯🇵 日本語（ローマ字）</option>
+                    <option value="en">🇺🇸 English</option>
+                    <option value="ja_raw">🇯🇵 日本語（そのまま）</option>
+                </select>
+                <button class="ll-nav-btn" @onclick="PrevPair" disabled="@(typeIdx==0)">◀</button>
+                <span class="ll-count">@(typeIdx+1) / @pairs.Count</span>
+                <button class="ll-nav-btn" @onclick="NextPair" disabled="@(typeIdx==pairs.Count-1)">▶</button>
+            </div>
+
+            <div class="ll-source">
+                @if (typeTarget == "en")
+                {
+                    <div>🇯🇵 @tp.Japanese</div>
+                    @if (!string.IsNullOrWhiteSpace(ToRomaji(tp.Japanese)))
+                    {
+                        <div class="ll-source-hint">@ToRomaji(tp.Japanese)</div>
+                    }
+                }
+                else
+                {
+                    <div>🇺🇸 @tp.English</div>
+                    @if (typeTarget == "ja_romaji")
+                    {
+                        <div class="ll-source-hint">🇯🇵 @tp.Japanese</div>
+                    }
+                }
+            </div>
+
+            <div class="ll-progress">
+                <div class="ll-progress-bar" style="width:@(progress)%"></div>
+            </div>
+
+            <div class="ll-target">
+                @for (int i = 0; i < target.Length; i++)
+                {
+                    var ci = i;
+                    var ch = target[ci];
+                    string cls = ci < typeInput.Length
+                        ? (typeInput[ci] == ch ? "tc-ok" : "tc-ng")
+                        : ci == typeInput.Length ? "tc-cur" : "tc-rest";
+                    <span class="@cls">@ch</span>
+                }
+            </div>
+
+            @if (done)
+            {
+                <div class="ll-done">
+                    ✅ 正解！
+                    <button class="ll-sm-btn" @onclick="NextPair" disabled="@(typeIdx==pairs.Count-1)">次へ ▶</button>
+                </div>
+            }
+
+            <input class="ll-type-input" type="text"
+                   @bind="typeInput" @bind:event="oninput"
+                   placeholder="@TypePlaceholder()"
+                   disabled="@done" />
+
+            <button class="ll-sm-btn" @onclick="ResetType">↩ リセット</button>
+        }
+    }
+</div>
+
+@code {
+    record SentencePair(string Japanese, string English);
+    record WordItem(string Word, int Idx, bool Hidden);
+
+    string tab = "add";
+    List<SentencePair> pairs = new();
+
+    // 例文追加
+    string addJa = "", addEn = "";
+
+    // 学習
+    List<SentencePair> studyPairs = new();
+    int studyIdx = 0;
+    bool hideJa = false, hideEn = true;
+    HashSet<int> clozeJa = new(), clozeEn = new();
+
+    // タイピング
+    int typeIdx = 0;
+    string typeTarget = "ja_romaji";
+    string typeInput = "";
+
+    // ── Lifecycle ──────────────────────────────────────────
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+        try
+        {
+            var json = await JS.InvokeAsync<string?>("localStorage.getItem", "ll_pairs_v1");
+            if (!string.IsNullOrEmpty(json))
+            {
+                pairs = JsonSerializer.Deserialize<List<SentencePair>>(json) ?? new();
+                studyPairs = new(pairs);
+                StateHasChanged();
+            }
+        }
+        catch { }
+    }
+
+    async Task Save()
+    {
+        var json = JsonSerializer.Serialize(pairs);
+        await JS.InvokeVoidAsync("localStorage.setItem", "ll_pairs_v1", json);
+    }
+
+    // ── 例文追加 ────────────────────────────────────────────
+    async Task AddPair()
+    {
+        if (string.IsNullOrWhiteSpace(addJa) && string.IsNullOrWhiteSpace(addEn)) return;
+        pairs.Add(new(addJa.Trim(), addEn.Trim()));
+        studyPairs = new(pairs);
+        addJa = ""; addEn = "";
+        await Save();
+    }
+
+    async Task DeletePair(int i)
+    {
+        pairs.RemoveAt(i);
+        studyPairs = new(pairs);
+        if (studyIdx >= studyPairs.Count) studyIdx = Math.Max(0, studyPairs.Count - 1);
+        await Save();
+    }
+
+    async Task OnAddKey(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") await AddPair();
+    }
+
+    // ── 学習 ────────────────────────────────────────────────
+    void StudyPrev() { if (studyIdx > 0) { studyIdx--; ClearCloze(); } }
+    void StudyNext() { if (studyIdx < studyPairs.Count - 1) { studyIdx++; ClearCloze(); } }
+
+    void Shuffle()
+    {
+        studyPairs = studyPairs.OrderBy(_ => Random.Shared.Next()).ToList();
+        studyIdx = 0; ClearCloze();
+    }
+
+    void DoCloze()
+    {
+        var p = studyPairs[studyIdx];
+        clozeJa = RandomHide(WordCount(p.Japanese));
+        clozeEn = RandomHide(WordCount(p.English));
+    }
+
+    void ClearCloze() { clozeJa.Clear(); clozeEn.Clear(); }
+
+    static int WordCount(string s) => s.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length;
+
+    static HashSet<int> RandomHide(int n)
+    {
+        var take = Math.Max(1, (int)Math.Ceiling(n * 0.5));
+        return new HashSet<int>(Enumerable.Range(0, n).OrderBy(_ => Random.Shared.Next()).Take(take));
+    }
+
+    IEnumerable<WordItem> SplitWords(string text, HashSet<int> hidden)
+        => text.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+               .Select((w, i) => new WordItem(w, i, hidden.Contains(i)));
+
+    // ── タイピング ──────────────────────────────────────────
+    void PrevPair() { if (typeIdx > 0) { typeIdx--; ResetType(); } }
+    void NextPair() { if (typeIdx < pairs.Count - 1) { typeIdx++; ResetType(); } }
+    void ResetType() { typeInput = ""; }
+
+    string TypePlaceholder() => typeTarget switch
+    {
+        "en"     => "Type in English...",
+        "ja_raw" => "日本語で入力（IME使用）...",
+        _        => "ローマ字で入力... (e.g. watashi wa)"
+    };
+
+    // ── ローマ字変換 ─────────────────────────────────────────
+    static readonly Dictionary<string, string> KR = new()
+    {
+        // 複合（必ず単体より先にチェック）
+        {"きゃ","kya"},{"きゅ","kyu"},{"きょ","kyo"},
+        {"しゃ","sha"},{"しゅ","shu"},{"しょ","sho"},
+        {"ちゃ","cha"},{"ちゅ","chu"},{"ちょ","cho"},
+        {"にゃ","nya"},{"にゅ","nyu"},{"にょ","nyo"},
+        {"ひゃ","hya"},{"ひゅ","hyu"},{"ひょ","hyo"},
+        {"みゃ","mya"},{"みゅ","myu"},{"みょ","myo"},
+        {"りゃ","rya"},{"りゅ","ryu"},{"りょ","ryo"},
+        {"ぎゃ","gya"},{"ぎゅ","gyu"},{"ぎょ","gyo"},
+        {"じゃ","ja"}, {"じゅ","ju"}, {"じょ","jo"},
+        {"びゃ","bya"},{"びゅ","byu"},{"びょ","byo"},
+        {"ぴゃ","pya"},{"ぴゅ","pyu"},{"ぴょ","pyo"},
+        // 単体
+        {"あ","a"},{"い","i"},{"う","u"},{"え","e"},{"お","o"},
+        {"か","ka"},{"き","ki"},{"く","ku"},{"け","ke"},{"こ","ko"},
+        {"さ","sa"},{"し","shi"},{"す","su"},{"せ","se"},{"そ","so"},
+        {"た","ta"},{"ち","chi"},{"つ","tsu"},{"て","te"},{"と","to"},
+        {"な","na"},{"に","ni"},{"ぬ","nu"},{"ね","ne"},{"の","no"},
+        {"は","ha"},{"ひ","hi"},{"ふ","fu"},{"へ","he"},{"ほ","ho"},
+        {"ま","ma"},{"み","mi"},{"む","mu"},{"め","me"},{"も","mo"},
+        {"や","ya"},{"ゆ","yu"},{"よ","yo"},
+        {"ら","ra"},{"り","ri"},{"る","ru"},{"れ","re"},{"ろ","ro"},
+        {"わ","wa"},{"を","wo"},{"ん","n"},
+        {"が","ga"},{"ぎ","gi"},{"ぐ","gu"},{"げ","ge"},{"ご","go"},
+        {"ざ","za"},{"じ","ji"},{"ず","zu"},{"ぜ","ze"},{"ぞ","zo"},
+        {"だ","da"},{"ぢ","ji"},{"づ","zu"},{"で","de"},{"ど","do"},
+        {"ば","ba"},{"び","bi"},{"ぶ","bu"},{"べ","be"},{"ぼ","bo"},
+        {"ぱ","pa"},{"ぴ","pi"},{"ぷ","pu"},{"ぺ","pe"},{"ぽ","po"},
+        {"ー","-"},{"、",", "},{"。",". "},{"！","!"},{"？","?"},
+        {"「","\""}, {"」","\""},
+    };
+
+    static char HiraganaNorm(char c)
+        => c >= 'ァ' && c <= 'ン' ? (char)(c - 0x60) : c;
+
+    string ToRomaji(string text)
+    {
+        if (string.IsNullOrEmpty(text)) return "";
+        var sb = new StringBuilder();
+        int i = 0;
+        while (i < text.Length)
+        {
+            char ch = HiraganaNorm(text[i]);
+
+            // っ → 次の子音を重ねる
+            if (ch == 'っ')
+            {
+                if (i + 1 < text.Length)
+                {
+                    char n1 = HiraganaNorm(text[i + 1]);
+                    string peek = n1.ToString();
+                    if (i + 2 < text.Length)
+                    {
+                        string two = n1.ToString() + HiraganaNorm(text[i + 2]).ToString();
+                        if (KR.TryGetValue(two, out var r2) && r2.Length > 0) { sb.Append(r2[0]); i++; continue; }
+                    }
+                    if (KR.TryGetValue(peek, out var r1) && r1.Length > 0) sb.Append(r1[0]);
+                }
+                i++; continue;
+            }
+
+            // 2文字複合
+            if (i + 1 < text.Length)
+            {
+                string two = ch.ToString() + HiraganaNorm(text[i + 1]).ToString();
+                if (KR.TryGetValue(two, out var r2)) { sb.Append(r2); i += 2; continue; }
+            }
+
+            // 1文字
+            if (KR.TryGetValue(ch.ToString(), out var r1s)) sb.Append(r1s);
+            else sb.Append(ch);
+            i++;
+        }
+        return sb.ToString();
+    }
+}

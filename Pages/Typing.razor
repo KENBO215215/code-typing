@@ -17,18 +17,26 @@
                 <div class="ctrl-group">
                     <label class="ctrl-label">Algorithm</label>
                     <select @bind="SelectedId">
-                        @foreach(var kv in Snippets)
-                        {
-                            <option value="@kv.Key">@kv.Value.Title</option>
-                        }
+                        <optgroup label="アルゴリズム">
+                            @foreach(var kv in Snippets.Where(x => x.Key < 19))
+                            {
+                                <option value="@kv.Key">@kv.Value.Title</option>
+                            }
+                        </optgroup>
+                        <optgroup label="基本情報 科目B (FE試験) 疑似言語">
+                            @foreach(var kv in Snippets.Where(x => x.Key >= 19))
+                            {
+                                <option value="@kv.Key">@kv.Value.Title</option>
+                            }
+                        </optgroup>
                     </select>
                 </div>
                 <div class="ctrl-group">
                     <label class="ctrl-label">Language</label>
                     <select @bind="SelectedLang">
-                        <option value="1">C#</option>
+                        <option value="1">C# / 疑似言語</option>
                         <option value="2">Python</option>
-                        <option value="3">Exam Notes</option>
+                        <option value="3">解説メモ</option>
                     </select>
                 </div>
                 <button class="reset-btn" @onclick="ResetTyping" title="Reset">↺ Reset</button>
@@ -501,6 +509,89 @@
 			Python = "# 【力まかせ文字列照合】テキストの各位置でパターンを総当たり O(nm)\ndef str_search(text, pat):\n    for i in range(len(text) - len(pat) + 1):\n        j = 0\n        # パターンの先頭から1文字ずつ照合\n        while j < len(pat) and text[i+j] == pat[j]:\n            j += 1\n        # パターン全文字が一致したら開始位置を返す\n        if j == len(pat):\n            return i\n    return -1",
 			Explanations = new[] { "各開始位置で全文字照合", "O(nm)" }
 		},
+
+		// ── 基本情報技術者試験 科目B 疑似言語 ──────────────────────────
+
+		[19] = new Snippet
+		{
+			Title = "[FE] 線形探索",
+			Description = "配列を先頭から1要素ずつ順に調べ、一致したらインデックスを返す。計算量 O(n)。ソート不要。IPA疑似言語: 添字は1始まり、代入は ←、等値判定は = 。",
+			CSharp = "○ 線形探索(整数型の配列: arr, 整数型: target): 整数型\n    整数型: i\n    for (i: 1 から 要素数(arr) まで 1 ずつ増やす)\n        if (arr[i] = target)\n            return i\n        endif\n    endfor\n    return -1",
+			Python = "# 【線形探索】配列を先頭から順に調べる O(n)\ndef linear_search(arr, target):\n    for i in range(len(arr)):\n        if arr[i] == target:\n            return i\n    return -1",
+			Explanations = new[] { "疑似言語: 添字1始まり・代入は ←・等値は =", "O(n) ソート不要" }
+		},
+
+		[20] = new Snippet
+		{
+			Title = "[FE] 二分探索",
+			Description = "ソート済み配列を中央で分割しながら探索範囲を半分に絞る。計算量 O(log n)。IPA疑似言語: ÷ は整数除算、≦ は以下を表す。",
+			CSharp = "○ 二分探索(整数型の配列: arr, 整数型: target): 整数型\n    整数型: low ← 1\n    整数型: high ← 要素数(arr)\n    整数型: mid\n    while (low ≦ high)\n        mid ← (low + high) ÷ 2\n        if (arr[mid] = target)\n            return mid\n        elseif (arr[mid] < target)\n            low ← mid + 1\n        else\n            high ← mid - 1\n        endif\n    endwhile\n    return -1",
+			Python = "# 【二分探索】ソート済み配列を O(log n) で検索\ndef binary_search(arr, target):\n    low, high = 0, len(arr) - 1\n    while low <= high:\n        mid = (low + high) // 2\n        if arr[mid] == target:\n            return mid\n        elif arr[mid] < target:\n            low = mid + 1\n        else:\n            high = mid - 1\n    return -1",
+			Explanations = new[] { "low・high・mid で範囲を半分に絞る", "O(log n) ソート済み前提" }
+		},
+
+		[21] = new Snippet
+		{
+			Title = "[FE] バブルソート",
+			Description = "隣接する要素を比較・交換しながら最大値を末尾に移動するパスを繰り返す。計算量 O(n²)。IPA試験で最頻出のソートアルゴリズム。",
+			CSharp = "○ バブルソート(整数型の配列: arr)\n    整数型: i, j, tmp\n    for (i: 1 から 要素数(arr) - 1 まで 1 ずつ増やす)\n        for (j: 1 から 要素数(arr) - i まで 1 ずつ増やす)\n            if (arr[j] > arr[j + 1])\n                tmp ← arr[j]\n                arr[j] ← arr[j + 1]\n                arr[j + 1] ← tmp\n            endif\n        endfor\n    endfor",
+			Python = "# 【バブルソート】隣接比較・交換を繰り返す O(n²)\ndef bubble_sort(arr):\n    n = len(arr)\n    for i in range(n - 1):\n        for j in range(n - 1 - i):\n            if arr[j] > arr[j + 1]:\n                arr[j], arr[j + 1] = arr[j + 1], arr[j]",
+			Explanations = new[] { "隣接交換で最大値を末尾へ確定", "O(n²) 試験最頻出" }
+		},
+
+		[22] = new Snippet
+		{
+			Title = "[FE] 選択ソート",
+			Description = "未整列部分の最小値を選択して先頭と交換する操作を繰り返す。計算量 O(n²)。交換回数が少なくほぼ O(n) 回。",
+			CSharp = "○ 選択ソート(整数型の配列: arr)\n    整数型: i, j, minIdx, tmp\n    for (i: 1 から 要素数(arr) - 1 まで 1 ずつ増やす)\n        minIdx ← i\n        for (j: i + 1 から 要素数(arr) まで 1 ずつ増やす)\n            if (arr[j] < arr[minIdx])\n                minIdx ← j\n            endif\n        endfor\n        tmp ← arr[i]\n        arr[i] ← arr[minIdx]\n        arr[minIdx] ← tmp\n    endfor",
+			Python = "# 【選択ソート】未整列の最小値を先頭へ O(n²)\ndef selection_sort(arr):\n    n = len(arr)\n    for i in range(n - 1):\n        min_idx = i\n        for j in range(i + 1, n):\n            if arr[j] < arr[min_idx]:\n                min_idx = j\n        arr[i], arr[min_idx] = arr[min_idx], arr[i]",
+			Explanations = new[] { "未整列部分の最小値インデックスを記録して交換", "O(n²) 交換回数 O(n)" }
+		},
+
+		[23] = new Snippet
+		{
+			Title = "[FE] スタック push / pop",
+			Description = "スタックはLIFO（後入れ先出し）構造。push で top を増やして積み、pop で top の値を返して減らす。top=0 でアンダーフロー、top≧サイズでオーバーフロー。",
+			CSharp = "○ push(整数型の配列: stack, 整数型: top, 整数型: val): 整数型\n    if (top ≧ 要素数(stack))\n        return -1\n    endif\n    top ← top + 1\n    stack[top] ← val\n    return top\n\n○ pop(整数型の配列: stack, 整数型: top): 整数型\n    if (top = 0)\n        return -1\n    endif\n    整数型: val ← stack[top]\n    top ← top - 1\n    return val",
+			Python = "# 【スタック push / pop】LIFO 後入れ先出し O(1)\ndef push(stack, top, val):\n    if top >= len(stack):\n        return -1  # overflow\n    top += 1\n    stack[top] = val\n    return top\n\ndef pop(stack, top):\n    if top == 0:\n        return -1, top  # underflow\n    val = stack[top]\n    top -= 1\n    return val, top",
+			Explanations = new[] { "push: top++ 後に格納 / pop: 値取得後 top--", "top=0 でアンダーフロー", "top≧サイズ でオーバーフロー" }
+		},
+
+		[24] = new Snippet
+		{
+			Title = "[FE] キュー enqueue / dequeue",
+			Description = "キューはFIFO（先入れ先出し）構造。リングバッファで実装。rear に追加(enqueue)、front から取り出し(dequeue)。(rear+1)%SIZE=front で満杯。",
+			CSharp = "○ enqueue(整数型の配列: q, 整数型: front, 整数型: rear, 整数型: val): 整数型\n    if ((rear + 1) mod 要素数(q) = front)\n        return -1\n    endif\n    rear ← (rear + 1) mod 要素数(q)\n    q[rear] ← val\n    return rear\n\n○ dequeue(整数型の配列: q, 整数型: front, 整数型: rear): 整数型\n    if (front = rear)\n        return -1\n    endif\n    front ← (front + 1) mod 要素数(q)\n    return q[front]",
+			Python = "# 【キュー enqueue / dequeue】FIFO リングバッファ O(1)\ndef enqueue(q, front, rear, val):\n    size = len(q)\n    if (rear + 1) % size == front:\n        return -1, rear  # full\n    rear = (rear + 1) % size\n    q[rear] = val\n    return rear\n\ndef dequeue(q, front, rear):\n    if front == rear:\n        return -1, front  # empty\n    front = (front + 1) % len(q)\n    return q[front], front",
+			Explanations = new[] { "front=rear で空、(rear+1)%SIZE=front で満杯", "rear に追加 / front から取り出し", "% で循環（リングバッファ）" }
+		},
+
+		[25] = new Snippet
+		{
+			Title = "[FE] 最大公約数（GCD）",
+			Description = "ユークリッドの互除法。gcd(a,b) = gcd(b, a mod b) を b=0 になるまで繰り返す。計算量 O(log min(a,b))。最小公倍数は a×b÷gcd(a,b)。",
+			CSharp = "○ gcd(整数型: a, 整数型: b): 整数型\n    整数型: tmp\n    while (b ≠ 0)\n        tmp ← b\n        b ← a mod b\n        a ← tmp\n    endwhile\n    return a",
+			Python = "# 【ユークリッドの互除法】最大公約数 O(log min(a,b))\ndef gcd(a, b):\n    while b != 0:\n        a, b = b, a % b\n    return a",
+			Explanations = new[] { "b=0 になるまで a←b, b←a mod b を繰り返す", "O(log min(a,b))", "LCM = a×b÷gcd(a,b)" }
+		},
+
+		[26] = new Snippet
+		{
+			Title = "[FE] 再帰: フィボナッチ",
+			Description = "fib(0)=0, fib(1)=1, fib(n)=fib(n-1)+fib(n-2)。再帰で直感的に実装できるが計算量 O(2ⁿ) と指数的。試験では再帰構造・終了条件・戻り値の流れを問われる。",
+			CSharp = "○ fibonacci(整数型: n): 整数型\n    if (n ≦ 1)\n        return n\n    endif\n    return fibonacci(n - 1) + fibonacci(n - 2)",
+			Python = "# 【フィボナッチ数列】再帰実装 O(2^n)\ndef fibonacci(n):\n    if n <= 1:\n        return n\n    return fibonacci(n - 1) + fibonacci(n - 2)",
+			Explanations = new[] { "n≦1 が再帰の終了条件（ベースケース）", "O(2ⁿ) ─ メモ化で O(n) に改善可能" }
+		},
+
+		[27] = new Snippet
+		{
+			Title = "[FE] 文字列探索（力まかせ）",
+			Description = "テキストの各開始位置でパターンを先頭から1文字ずつ照合する。計算量 O(n×m)。IPA疑似言語: 文字数() で文字列長を取得。かつ は論理 AND。",
+			CSharp = "○ 文字列探索(文字列型: text, 文字列型: pattern): 整数型\n    整数型: i, j\n    for (i: 1 から 文字数(text) - 文字数(pattern) + 1 まで 1 ずつ増やす)\n        j ← 1\n        while (j ≦ 文字数(pattern) かつ text[i + j - 1] = pattern[j])\n            j ← j + 1\n        endwhile\n        if (j > 文字数(pattern))\n            return i\n        endif\n    endfor\n    return -1",
+			Python = "# 【文字列探索 力まかせ】O(n×m)\ndef str_search(text, pattern):\n    n, m = len(text), len(pattern)\n    for i in range(n - m + 1):\n        j = 0\n        while j < m and text[i + j] == pattern[j]:\n            j += 1\n        if j == m:\n            return i\n    return -1",
+			Explanations = new[] { "各開始位置 i でパターンと1文字ずつ照合", "j>文字数(pattern) で全一致を判定", "O(n×m)" }
+		},
 	};
 
 	// DisplayCode is defined above with optional override (_displayOverride)
@@ -555,7 +646,7 @@
 				}
 				else
 				{
-					sb.Append($"<span style=\"color:{NgColor};opacity:0.75;\">{c}</span>");
+					sb.Append($"<span style=\"color:#fff;background:{NgColor};border-radius:2px;padding:0 1px;\">{c}</span>");
 				}
 			}
 			else
