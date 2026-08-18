@@ -32,6 +32,7 @@
            padding: 0.65rem 0.9rem; border-radius: 8px; }
 .ll-item-texts { flex: 1; display: flex; flex-direction: column; gap: 0.1rem; }
 .ll-item-ja { font-size: 0.95rem; color: #cdd6f4; }
+.ll-item-reading { font-size: 0.8rem; color: #89b4fa; }
 .ll-item-en { font-size: 0.82rem; color: #9399b2; }
 .ll-del-btn { background: none; border: none; color: #f38ba8; cursor: pointer;
               font-size: 1rem; padding: 0.2rem 0.5rem; border-radius: 5px; }
@@ -110,13 +111,16 @@
     @if (tab == "add")
     {
         <div class="ll-form">
-            <span class="ll-form-label">🇯🇵 日本語</span>
+            <span class="ll-form-label">🇯🇵 日本語（漢字OK）</span>
             <input class="ll-input" type="text" @bind="addJa" @bind:event="oninput"
-                   placeholder="例：わたしは がくせい です" @onkeydown="OnAddKey" />
-            <span class="ll-hint">ひらがなで書くとローマ字タイピングに使えます（単語はスペース区切り）</span>
+                   placeholder="例：今日は案内してくれてありがとう" @onkeydown="OnAddKey" />
+            <span class="ll-form-label">📖 読み（ひらがな・任意）— ローマ字タイピング用</span>
+            <input class="ll-input" type="text" @bind="addReading" @bind:event="oninput"
+                   placeholder="例：きょうは あんないして くれて ありがとう" @onkeydown="OnAddKey" />
+            <span class="ll-hint">単語をスペースで区切ると学習モードで1単語ずつ隠せます</span>
             <span class="ll-form-label">🇺🇸 English</span>
             <input class="ll-input" type="text" @bind="addEn" @bind:event="oninput"
-                   placeholder="I am a student" @onkeydown="OnAddKey" />
+                   placeholder="Thank you for showing me around today" @onkeydown="OnAddKey" />
             <button class="ll-add-btn" @onclick="AddPair"
                     disabled="@(string.IsNullOrWhiteSpace(addJa) && string.IsNullOrWhiteSpace(addEn))">
                 ➕ 追加
@@ -137,6 +141,10 @@
                     <div class="ll-item">
                         <div class="ll-item-texts">
                             <span class="ll-item-ja">@p.Japanese</span>
+                            @if (!string.IsNullOrWhiteSpace(p.Reading))
+                            {
+                                <span class="ll-item-reading">@p.Reading</span>
+                            }
                             <span class="ll-item-en">@p.English</span>
                         </div>
                         <button class="ll-del-btn" @onclick="() => DeletePair(idx)">✕</button>
@@ -175,6 +183,9 @@
             <div class="ll-cloze-row">
                 <button class="ll-sm-btn" @onclick="DoCloze">🎲 単語をランダムに隠す</button>
                 <button class="ll-sm-btn" @onclick="ClearCloze">↩ リセット</button>
+                <span class="ll-count" style="margin-left:0.4rem;">@clozePercent%</span>
+                <input type="range" min="10" max="90" step="10" @bind="clozePercent"
+                       style="width:90px;accent-color:#89b4fa;" />
             </div>
 
             <div class="ll-card">
@@ -200,6 +211,12 @@
                                 }
                             }
                         </div>
+                        @if (!string.IsNullOrWhiteSpace(sp.Reading))
+                        {
+                            <div style="font-size:0.82rem;color:#6c7086;margin-top:0.2rem;">
+                                読み: @sp.Reading
+                            </div>
+                        }
                     }
                 </div>
 
@@ -241,11 +258,13 @@
         else
         {
             var tp = pairs[typeIdx];
+            // ローマ字モード: 読みフィールドがあればそちらを変換、なければ日本語直接
+            var romajiSrc = !string.IsNullOrWhiteSpace(tp.Reading) ? tp.Reading : tp.Japanese;
             var target = typeTarget switch
             {
                 "en"     => tp.English,
                 "ja_raw" => tp.Japanese,
-                _        => ToRomaji(tp.Japanese)
+                _        => ToRomaji(romajiSrc)
             };
             var done = typeInput.Length > 0 && typeInput == target;
             var progress = target.Length == 0 ? 0 : Math.Min(100, typeInput.Length * 100 / target.Length);
@@ -266,18 +285,23 @@
                 @if (typeTarget == "en")
                 {
                     <div>🇯🇵 @tp.Japanese</div>
-                    @if (!string.IsNullOrWhiteSpace(ToRomaji(tp.Japanese)))
+                    @if (!string.IsNullOrWhiteSpace(tp.Reading))
                     {
-                        <div class="ll-source-hint">@ToRomaji(tp.Japanese)</div>
+                        <div class="ll-source-hint">読み: @tp.Reading</div>
                     }
+                }
+                else if (typeTarget == "ja_romaji")
+                {
+                    <div>🇯🇵 @tp.Japanese</div>
+                    @if (!string.IsNullOrWhiteSpace(tp.Reading))
+                    {
+                        <div class="ll-source-hint">読み: @tp.Reading</div>
+                    }
+                    <div style="margin-top:0.3rem;font-size:0.78rem;color:#585b70;">🇺🇸 @tp.English</div>
                 }
                 else
                 {
                     <div>🇺🇸 @tp.English</div>
-                    @if (typeTarget == "ja_romaji")
-                    {
-                        <div class="ll-source-hint">🇯🇵 @tp.Japanese</div>
-                    }
                 }
             </div>
 
@@ -316,20 +340,26 @@
 </div>
 
 @code {
-    record SentencePair(string Japanese, string English);
+    class SentencePair
+    {
+        public string Japanese { get; set; } = "";
+        public string Reading  { get; set; } = "";  // ひらがな読み（任意）
+        public string English  { get; set; } = "";
+    }
     record WordItem(string Word, int Idx, bool Hidden);
 
     string tab = "add";
     List<SentencePair> pairs = new();
 
     // 例文追加
-    string addJa = "", addEn = "";
+    string addJa = "", addReading = "", addEn = "";
 
     // 学習
     List<SentencePair> studyPairs = new();
     int studyIdx = 0;
     bool hideJa = false, hideEn = true;
     HashSet<int> clozeJa = new(), clozeEn = new();
+    int clozePercent = 50;
 
     // タイピング
     int typeIdx = 0;
@@ -363,9 +393,9 @@
     async Task AddPair()
     {
         if (string.IsNullOrWhiteSpace(addJa) && string.IsNullOrWhiteSpace(addEn)) return;
-        pairs.Add(new(addJa.Trim(), addEn.Trim()));
+        pairs.Add(new SentencePair { Japanese = addJa.Trim(), Reading = addReading.Trim(), English = addEn.Trim() });
         studyPairs = new(pairs);
-        addJa = ""; addEn = "";
+        addJa = ""; addReading = ""; addEn = "";
         await Save();
     }
 
@@ -395,17 +425,17 @@
     void DoCloze()
     {
         var p = studyPairs[studyIdx];
-        clozeJa = RandomHide(WordCount(p.Japanese));
-        clozeEn = RandomHide(WordCount(p.English));
+        clozeJa = RandomHide(WordCount(p.Japanese), clozePercent);
+        clozeEn = RandomHide(WordCount(p.English), clozePercent);
     }
 
     void ClearCloze() { clozeJa.Clear(); clozeEn.Clear(); }
 
     static int WordCount(string s) => s.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length;
 
-    static HashSet<int> RandomHide(int n)
+    static HashSet<int> RandomHide(int n, int percent)
     {
-        var take = Math.Max(1, (int)Math.Ceiling(n * 0.5));
+        var take = Math.Max(1, (int)Math.Ceiling(n * percent / 100.0));
         return new HashSet<int>(Enumerable.Range(0, n).OrderBy(_ => Random.Shared.Next()).Take(take));
     }
 
