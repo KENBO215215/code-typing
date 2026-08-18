@@ -97,6 +97,16 @@
 .ll-progress { height: 4px; background: #313244; border-radius: 2px; margin-bottom: 0.9rem; }
 .ll-progress-bar { height: 4px; background: #89b4fa; border-radius: 2px; transition: width .1s; }
 
+/* ── グループフィルタ ── */
+.ll-group-row { display: flex; gap: 0.4rem; flex-wrap: wrap; margin-bottom: 0.85rem; }
+.ll-gf { padding: 0.25rem 0.75rem; border-radius: 20px; border: 1px solid #45475a;
+         background: transparent; color: #9399b2; cursor: pointer; font-size: 0.8rem; }
+.ll-gf.active { background: #89b4fa; color: #1e1e2e; border-color: #89b4fa; font-weight: 700; }
+.ll-gf:hover:not(.active) { border-color: #89b4fa; color: #cdd6f4; }
+.ll-group-badge { font-size: 0.7rem; background: #313244; color: #89b4fa;
+                  border-radius: 4px; padding: 0.1rem 0.45rem; }
+.ll-jump-select { flex: 1; max-width: 300px; }
+
 /* ── 文法タブ ── */
 .ll-grammar-list { display: flex; flex-direction: column; gap: 0.6rem; }
 .ll-gpoint { background: #1e1e2e; border-radius: 10px; overflow: hidden; }
@@ -149,6 +159,12 @@
             <span class="ll-form-label">🇺🇸 English</span>
             <input class="ll-input" type="text" @bind="addEn" @bind:event="oninput"
                    placeholder="Thank you for showing me around today" @onkeydown="OnAddKey" />
+            <span class="ll-form-label">📂 グループ（任意）— 例：あいさつ・買い物・自己紹介</span>
+            <input class="ll-input" type="text" @bind="addGroup" @bind:event="oninput"
+                   placeholder="グループ名" list="ll-group-dl" @onkeydown="OnAddKey" />
+            <datalist id="ll-group-dl">
+                @foreach (var g in AllGroups) { <option value="@g" /> }
+            </datalist>
             <button class="ll-add-btn" @onclick="AddPair"
                     disabled="@(string.IsNullOrWhiteSpace(addJa) && string.IsNullOrWhiteSpace(addEn))">
                 ➕ 追加
@@ -168,7 +184,13 @@
                     var idx = i;
                     <div class="ll-item">
                         <div class="ll-item-texts">
-                            <span class="ll-item-ja">@p.Japanese</span>
+                            <span class="ll-item-ja">
+                                @p.Japanese
+                                @if (!string.IsNullOrWhiteSpace(p.Group))
+                                {
+                                    <span class="ll-group-badge" style="margin-left:0.4rem;">@p.Group</span>
+                                }
+                            </span>
                             @if (!string.IsNullOrWhiteSpace(p.Reading))
                             {
                                 <span class="ll-item-reading">@p.Reading</span>
@@ -192,9 +214,27 @@
         else
         {
             var sp = studyPairs[studyIdx];
+            @if (AllGroups.Count > 0)
+            {
+                <div class="ll-group-row">
+                    <button class="ll-gf @(selectedGroup==""?"active":"")" @onclick='()=>ChangeGroup("")'>全て</button>
+                    @foreach (var g in AllGroups)
+                    {
+                        var gc = g;
+                        <button class="ll-gf @(selectedGroup==gc?"active":"")" @onclick="()=>ChangeGroup(gc)">@gc</button>
+                    }
+                </div>
+            }
             <div class="ll-nav">
                 <button class="ll-nav-btn" @onclick="StudyPrev" disabled="@(studyIdx==0)">◀</button>
-                <span class="ll-count">@(studyIdx+1) / @studyPairs.Count</span>
+                <select class="ll-select ll-jump-select" @onchange="JumpStudy">
+                    @for (int si = 0; si < studyPairs.Count; si++)
+                    {
+                        var ssp = studyPairs[si]; var ssi = si;
+                        var lbl = ssp.Japanese.Length > 18 ? ssp.Japanese[..18] + "…" : ssp.Japanese;
+                        <option value="@ssi" selected="@(ssi==studyIdx)">@(ssi+1). @lbl</option>
+                    }
+                </select>
                 <button class="ll-nav-btn" @onclick="StudyNext" disabled="@(studyIdx==studyPairs.Count-1)">▶</button>
                 <button class="ll-sm-btn" @onclick="Shuffle">🔀 シャッフル</button>
             </div>
@@ -285,8 +325,9 @@
         }
         else
         {
-            var tp = pairs[typeIdx];
-            // ローマ字モード: 読みフィールドがあればそちらを変換、なければ日本語直接
+            var activePairs = ActivePairs;
+            if (typeIdx >= activePairs.Count) typeIdx = 0;
+            var tp = activePairs.Count > 0 ? activePairs[typeIdx] : pairs[0];
             var romajiSrc = !string.IsNullOrWhiteSpace(tp.Reading) ? tp.Reading : tp.Japanese;
             var target = typeTarget switch
             {
@@ -300,6 +341,17 @@
                 ? ToRomaji(tp.Reading) : ToRomaji(tp.Japanese);
             var hasKanji = romajiDisplay.Any(c => c >= '一' && c <= '鿿');
 
+            @if (AllGroups.Count > 0)
+            {
+                <div class="ll-group-row">
+                    <button class="ll-gf @(selectedGroup==""?"active":"")" @onclick='()=>ChangeGroup("")'>全て</button>
+                    @foreach (var g in AllGroups)
+                    {
+                        var gc = g;
+                        <button class="ll-gf @(selectedGroup==gc?"active":"")" @onclick="()=>ChangeGroup(gc)">@gc</button>
+                    }
+                </div>
+            }
             <div class="ll-type-ctrl">
                 <label>対象:</label>
                 <select class="ll-select" @bind="typeTarget" @bind:after="ResetType">
@@ -308,8 +360,15 @@
                     <option value="ja_raw">🇯🇵 日本語（そのまま）</option>
                 </select>
                 <button class="ll-nav-btn" @onclick="PrevPair" disabled="@(typeIdx==0)">◀</button>
-                <span class="ll-count">@(typeIdx+1) / @pairs.Count</span>
-                <button class="ll-nav-btn" @onclick="NextPair" disabled="@(typeIdx==pairs.Count-1)">▶</button>
+                <select class="ll-select ll-jump-select" @onchange="JumpType">
+                    @for (int si = 0; si < activePairs.Count; si++)
+                    {
+                        var asp = activePairs[si]; var asi = si;
+                        var lbl = asp.Japanese.Length > 16 ? asp.Japanese[..16] + "…" : asp.Japanese;
+                        <option value="@asi" selected="@(asi==typeIdx)">@(asi+1). @lbl</option>
+                    }
+                </select>
+                <button class="ll-nav-btn" @onclick="NextPair" disabled="@(typeIdx==activePairs.Count-1)">▶</button>
             </div>
 
             <div class="ll-source">
@@ -423,8 +482,9 @@
     class SentencePair
     {
         public string Japanese { get; set; } = "";
-        public string Reading  { get; set; } = "";  // ひらがな読み（任意）
+        public string Reading  { get; set; } = "";
         public string English  { get; set; } = "";
+        public string Group    { get; set; } = "";
     }
     record WordItem(string Word, int Idx, bool Hidden);
 
@@ -432,7 +492,7 @@
     List<SentencePair> pairs = new();
 
     // 例文追加
-    string addJa = "", addReading = "", addEn = "";
+    string addJa = "", addReading = "", addEn = "", addGroup = "";
 
     // 学習
     List<SentencePair> studyPairs = new();
@@ -440,6 +500,7 @@
     bool hideJa = false, hideEn = true;
     HashSet<int> clozeJa = new(), clozeEn = new();
     int clozePercent = 50;
+    string selectedGroup = "";
 
     // タイピング
     int typeIdx = 0;
@@ -470,11 +531,24 @@
     }
 
     // ── 例文追加 ────────────────────────────────────────────
+    List<string> AllGroups => pairs.Select(p => p.Group).Where(g => !string.IsNullOrWhiteSpace(g))
+                                   .Distinct().OrderBy(g => g).ToList();
+
+    List<SentencePair> ActivePairs => string.IsNullOrEmpty(selectedGroup)
+        ? pairs : pairs.Where(p => p.Group == selectedGroup).ToList();
+
+    void ChangeGroup(string g)
+    {
+        selectedGroup = g; studyIdx = 0; typeIdx = 0;
+        studyPairs = new(ActivePairs); ClearCloze();
+    }
+
     async Task AddPair()
     {
         if (string.IsNullOrWhiteSpace(addJa) && string.IsNullOrWhiteSpace(addEn)) return;
-        pairs.Add(new SentencePair { Japanese = addJa.Trim(), Reading = addReading.Trim(), English = addEn.Trim() });
-        studyPairs = new(pairs);
+        pairs.Add(new SentencePair { Japanese = addJa.Trim(), Reading = addReading.Trim(),
+                                     English = addEn.Trim(), Group = addGroup.Trim() });
+        studyPairs = new(ActivePairs);
         addJa = ""; addReading = ""; addEn = "";
         await Save();
     }
@@ -505,28 +579,39 @@
     void DoCloze()
     {
         var p = studyPairs[studyIdx];
-        clozeJa = RandomHide(WordCount(p.Japanese), clozePercent);
-        clozeEn = RandomHide(WordCount(p.English), clozePercent);
+        clozeJa = RandomHide(SmartSplit(p.Japanese).Length, clozePercent);
+        clozeEn = RandomHide(SmartSplit(p.English).Length, clozePercent);
     }
 
     void ClearCloze() { clozeJa.Clear(); clozeEn.Clear(); }
 
-    static int WordCount(string s) => s.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length;
+    static string[] SmartSplit(string text)
+    {
+        if (string.IsNullOrEmpty(text)) return [];
+        var bySpace = text.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (bySpace.Length > 1) return bySpace;
+        // スペースなし（日本語等）: 3文字ずつ分割
+        var chunks = new List<string>();
+        for (int i = 0; i < text.Length; i += 3)
+            chunks.Add(text.Substring(i, Math.Min(3, text.Length - i)));
+        return chunks.ToArray();
+    }
 
     static HashSet<int> RandomHide(int n, int percent)
     {
-        if (n <= 1) return new();  // 1単語以下は隠さない（全消え防止）
-        var take = Math.Min(n - 1, (int)Math.Floor(n * percent / 100.0));  // 必ず1単語以上残す
+        if (n <= 1) return new();
+        var take = Math.Min(n - 1, (int)Math.Floor(n * percent / 100.0));
         return new HashSet<int>(Enumerable.Range(0, n).OrderBy(_ => Random.Shared.Next()).Take(take));
     }
 
     IEnumerable<WordItem> SplitWords(string text, HashSet<int> hidden)
-        => text.Split(' ', StringSplitOptions.RemoveEmptyEntries)
-               .Select((w, i) => new WordItem(w, i, hidden.Contains(i)));
+        => SmartSplit(text).Select((w, i) => new WordItem(w, i, hidden.Contains(i)));
 
     // ── タイピング ──────────────────────────────────────────
     void PrevPair() { if (typeIdx > 0) { typeIdx--; ResetType(); } }
-    void NextPair() { if (typeIdx < pairs.Count - 1) { typeIdx++; ResetType(); } }
+    void NextPair() { if (typeIdx < ActivePairs.Count - 1) { typeIdx++; ResetType(); } }
+    void JumpType(ChangeEventArgs e)  { typeIdx  = int.TryParse(e.Value?.ToString(), out var v) ? v : 0; ResetType(); }
+    void JumpStudy(ChangeEventArgs e) { studyIdx = int.TryParse(e.Value?.ToString(), out var v) ? v : 0; ClearCloze(); }
     void ResetType() { typeInput = ""; }
 
     string TypePlaceholder() => typeTarget switch
