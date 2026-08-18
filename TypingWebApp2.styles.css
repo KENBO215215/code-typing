@@ -371,6 +371,15 @@ main[b-on8cqnf239] {
     color: #1e1e2e;
     box-shadow: 0 0 6px #f38ba8;
 }
+@keyframes kbFlashWrong-b-9vxif6glsk {
+    0%   { background:#f38ba8; border-color:#f38ba8; box-shadow:0 0 16px #f38ba8; color:#1e1e2e; transform:scale(1.12); }
+    60%  { background:#f38ba8aa; box-shadow:0 0 8px #f38ba8; transform:scale(1.05); }
+    100% { background:transparent; border-color:var(--border,#ccc); box-shadow:none; transform:scale(1); }
+}
+.on-screen-keyboard .key.flash-wrong[b-9vxif6glsk] {
+    animation: kbFlashWrong-b-9vxif6glsk 0.45s ease-out forwards;
+    color: #1e1e2e;
+}
 .on-screen-keyboard .key.special[b-9vxif6glsk] { background: var(--surface2, #f0f0f0); }
 
 /* ── Live compare ── */
