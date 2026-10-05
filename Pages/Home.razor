@@ -1,7 +1,331 @@
-﻿@page "/"
+@page "/"
 
-<PageTitle>Home</PageTitle>
+<PageTitle>Portfolio – Kensuke Saito</PageTitle>
 
-<h1>Hello, world!</h1>
+<div class="pf-root">
 
-Welcome to your new app.
+  <!-- Hero -->
+  <section class="pf-hero">
+    <div class="pf-hero-inner">
+      <p class="pf-label">Developer Portfolio</p>
+      <h1 class="pf-name">Kensuke Saito</h1>
+      <p class="pf-tagline">Chrome拡張機能 / Pythonツール / ゲーム開発 / Webアプリ</p>
+    </div>
+  </section>
+
+  <!-- Projects -->
+  <section class="pf-section">
+    <h2 class="pf-section-title">制作物</h2>
+    <div class="pf-grid">
+
+      <!-- Hover Translator -->
+      <div class="pf-card pf-card-featured">
+        <div class="pf-card-media">
+          <img src="portfolio/ht-demo.gif" alt="Hover Translator デモ" loading="lazy" />
+        </div>
+        <div class="pf-card-body">
+          <div class="pf-card-header">
+            <h3>Hover Translator</h3>
+            <span class="pf-badge pf-badge-extension">Chrome拡張</span>
+          </div>
+          <p class="pf-card-desc">
+            単語にホバーするだけでDeepL APIによる即時翻訳。32言語対応、単語帳・フラッシュカード・YouTube/Netflix/Amazon Prime字幕翻訳・語順分解（WBW）・テキスト読み上げ（TTS）・Gemini AIによる例文解説を搭載。
+          </p>
+          <div class="pf-tags">
+            <span>JavaScript</span><span>Chrome MV3</span><span>DeepL API</span><span>Gemini API</span><span>MutationObserver</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sticky Timer -->
+      <div class="pf-card pf-card-featured">
+        <div class="pf-card-media">
+          <img src="portfolio/st-demo.gif" alt="Sticky Timer デモ" loading="lazy" />
+        </div>
+        <div class="pf-card-body">
+          <div class="pf-card-header">
+            <h3>Sticky Timer</h3>
+            <span class="pf-badge pf-badge-extension">Chrome拡張</span>
+          </div>
+          <p class="pf-card-desc">
+            どのWebページにも重なって表示されるフローティング付箋＋タイマー。YouTube Musicプレーヤー内蔵、ウィンドウロック機能、アラーム（Web Audio API）、タスクカード独立ウィンドウなど実装。ページをまたいでも消えない設計。
+          </p>
+          <div class="pf-tags">
+            <span>JavaScript</span><span>Chrome MV3</span><span>Web Audio API</span><span>chrome.windows API</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Game Translator -->
+      <div class="pf-card">
+        <div class="pf-card-body">
+          <div class="pf-card-header">
+            <h3>Game Translator</h3>
+            <span class="pf-badge pf-badge-python">Python</span>
+          </div>
+          <p class="pf-card-desc">
+            ゲーム画面のテキストをOCRでリアルタイム翻訳するデスクトップツール。F4でキャプチャ範囲を選択して翻訳、F8でGemini AIとチャット、クイズ機能、OBS WebSocketでゲーム画面にオーバーレイ表示。
+          </p>
+          <div class="pf-tags">
+            <span>Python</span><span>pytesseract</span><span>Gemini API</span><span>OBS WebSocket</span><span>tkinter</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Godot Game -->
+      <div class="pf-card">
+        <div class="pf-card-media">
+          <img src="portfolio/game-demo.gif" alt="弾幕ゲーム デモ" loading="lazy" />
+        </div>
+        <div class="pf-card-body">
+          <div class="pf-card-header">
+            <h3>弾幕アクションゲーム</h3>
+            <span class="pf-badge pf-badge-game">Godot 4</span>
+          </div>
+          <p class="pf-card-desc">
+            Godot 4 + C# で開発中の弾幕アクションゲーム。ランダムスキル選択・強化システム、2Pローカル協力プレイ、ボスバトルを実装。ドット絵アセットも自作。
+          </p>
+          <div class="pf-tags">
+            <span>Godot 4</span><span>C#</span><span>2Dゲーム</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Code Typing Practice -->
+      <div class="pf-card">
+        <div class="pf-card-body">
+          <div class="pf-card-header">
+            <h3>Code Typing Practice</h3>
+            <span class="pf-badge pf-badge-web">Blazor WASM</span>
+          </div>
+          <p class="pf-card-desc">
+            このサイト自体。アルゴリズム14種（C# / Python）のコードをタイピング練習できるWebアプリ。WPM計測・ハイスコア保存・仮想キーボード・ダークモード・カスタムコード貼り付けに対応。
+          </p>
+          <div class="pf-tags">
+            <span>C#</span><span>Blazor WASM</span><span>GitHub Pages</span>
+          </div>
+          <div class="pf-card-links">
+            <a href="/typing" class="pf-btn pf-btn-sm">試す →</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Minecraft Mod -->
+      <div class="pf-card">
+        <div class="pf-card-body">
+          <div class="pf-card-header">
+            <h3>Minecraft 翻訳MOD</h3>
+            <span class="pf-badge pf-badge-java">Java</span>
+          </div>
+          <p class="pf-card-desc">
+            NeoForge 1.21.1向けのMinecraft MOD。ゲーム内チャットをリアルタイムで翻訳して表示。友人グループへ配布・実運用中。
+          </p>
+          <div class="pf-tags">
+            <span>Java</span><span>NeoForge 1.21.1</span><span>Minecraft MOD</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Skills -->
+  <section class="pf-section">
+    <h2 class="pf-section-title">技術スタック</h2>
+    <div class="pf-skills-grid">
+      <div class="pf-skill-group">
+        <h4>言語</h4>
+        <div class="pf-tags">
+          <span>JavaScript</span><span>Python</span><span>C#</span><span>Java</span><span>HTML/CSS</span>
+        </div>
+      </div>
+      <div class="pf-skill-group">
+        <h4>フレームワーク・環境</h4>
+        <div class="pf-tags">
+          <span>Chrome MV3</span><span>Blazor WASM</span><span>Godot 4</span><span>NeoForge</span><span>.NET MAUI</span>
+        </div>
+      </div>
+      <div class="pf-skill-group">
+        <h4>API・サービス</h4>
+        <div class="pf-tags">
+          <span>DeepL API</span><span>Gemini API</span><span>Stripe</span><span>OBS WebSocket</span><span>GitHub Pages</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<style>
+.pf-root {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 0 0 60px;
+}
+
+/* Hero */
+.pf-hero {
+  padding: 48px 0 40px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 40px;
+}
+.pf-hero-inner { }
+.pf-label {
+  font-size: 0.75rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin: 0 0 8px;
+}
+.pf-name {
+  font-size: 2.2rem;
+  font-weight: 700;
+  margin: 0 0 8px;
+  color: var(--text);
+}
+.pf-tagline {
+  color: var(--text-muted);
+  font-size: 1rem;
+  margin: 0 0 20px;
+}
+.pf-links { display: flex; gap: 10px; flex-wrap: wrap; }
+
+/* Buttons */
+.pf-btn {
+  display: inline-block;
+  padding: 7px 18px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+.pf-btn:hover { opacity: 0.8; text-decoration: none; }
+.pf-btn-outline {
+  border: 1.5px solid var(--accent);
+  color: var(--accent);
+  background: transparent;
+}
+.pf-btn-sm {
+  padding: 5px 14px;
+  font-size: 0.8rem;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+}
+
+/* Section */
+.pf-section { margin-bottom: 48px; }
+.pf-section-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 8px;
+  margin-bottom: 24px;
+}
+
+/* Grid */
+.pf-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+  gap: 20px;
+}
+
+/* Card */
+.pf-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: box-shadow 0.15s;
+}
+.pf-card:hover { box-shadow: 0 4px 20px rgba(0,0,0,0.15); }
+.pf-card-featured { grid-column: span 1; }
+
+.pf-card-media img {
+  width: 100%;
+  height: 200px;
+  object-fit: cover;
+  display: block;
+}
+.pf-card-body {
+  padding: 18px 20px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1;
+}
+.pf-card-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.pf-card-header h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text);
+}
+.pf-card-desc {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: var(--text-muted);
+}
+.pf-card-links { margin-top: auto; padding-top: 4px; }
+
+/* Badges */
+.pf-badge {
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+.pf-badge-extension { background: #1d4ed8; color: #fff; }
+.pf-badge-python    { background: #15803d; color: #fff; }
+.pf-badge-game      { background: #7c3aed; color: #fff; }
+.pf-badge-web       { background: #0369a1; color: #fff; }
+.pf-badge-java      { background: #b45309; color: #fff; }
+
+/* Tags */
+.pf-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.pf-tags span {
+  font-size: 0.72rem;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: var(--surface2);
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+}
+
+/* Skills grid */
+.pf-skills-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 20px;
+}
+.pf-skill-group h4 {
+  margin: 0 0 10px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+@@media (max-width: 480px) {
+  .pf-grid { grid-template-columns: 1fr; }
+  .pf-name { font-size: 1.6rem; }
+  .pf-skills-grid { grid-template-columns: 1fr; }
+}
+</style>
