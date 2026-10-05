@@ -10,6 +10,11 @@
       <p class="pf-label">Developer Portfolio</p>
       <h1 class="pf-name">Kensuke Saito</h1>
       <p class="pf-tagline">Chrome拡張機能 / Pythonツール / ゲーム開発 / Webアプリ</p>
+      <p class="pf-bio">
+        介護職として5年間働いたのち、独学とプログラミング訓練校（6ヶ月）でエンジニアに転向。
+        英検1級一次試験合格、スペイン語・中国語も学習中。
+        「自分が使いたいものを作る」をモットーに、Chrome拡張機能・ゲーム・ツールを制作しています。
+      </p>
     </div>
   </section>
 
@@ -30,6 +35,7 @@
           </div>
           <p class="pf-card-desc">
             単語にホバーするだけでDeepL APIによる即時翻訳。32言語対応、単語帳・フラッシュカード・YouTube/Netflix/Amazon Prime字幕翻訳・語順分解（WBW）・テキスト読み上げ（TTS）・Gemini AIによる例文解説を搭載。
+            <em class="pf-motive">海外の動画を見ながら単語を調べる作業を効率化したくて制作。字幕サイトごとにDOM構造が異なるため、MutationObserverを使った言語判定の実装に最も苦労した。</em>
           </p>
           <div class="pf-tags">
             <span>JavaScript</span><span>Chrome MV3</span><span>DeepL API</span><span>Gemini API</span><span>MutationObserver</span>
@@ -49,6 +55,7 @@
           </div>
           <p class="pf-card-desc">
             どのWebページにも重なって表示されるフローティング付箋＋タイマー。YouTube Musicプレーヤー内蔵、ウィンドウロック機能、アラーム（Web Audio API）、タスクカード独立ウィンドウなど実装。ページをまたいでも消えない設計。
+            <em class="pf-motive">勉強中にタイマーを別アプリで管理するのが面倒で制作。ページをまたいでも消えないようcontent.jsではなくchrome.windows APIで独立ウィンドウとして実装するのに苦労した。</em>
           </p>
           <div class="pf-tags">
             <span>JavaScript</span><span>Chrome MV3</span><span>Web Audio API</span><span>chrome.windows API</span>
@@ -65,6 +72,7 @@
           </div>
           <p class="pf-card-desc">
             ゲーム画面のテキストをOCRでリアルタイム翻訳するデスクトップツール。F4でキャプチャ範囲を選択して翻訳、F8でGemini AIとチャット、クイズ機能、OBS WebSocketでゲーム画面にオーバーレイ表示。
+            <em class="pf-motive">日本語未対応のPCゲームを遊ぶために制作。OCRの誤認識を減らすための前処理の調整に苦労した。</em>
           </p>
           <div class="pf-tags">
             <span>Python</span><span>pytesseract</span><span>Gemini API</span><span>OBS WebSocket</span><span>tkinter</span>
@@ -84,6 +92,7 @@
           </div>
           <p class="pf-card-desc">
             Godot 4 + C# で開発中の弾幕アクションゲーム。ランダムスキル選択・強化システム、2Pローカル協力プレイ、ボスバトルを実装。ドット絵アセットも自作。
+            <em class="pf-motive">昔から弾幕ゲームが好きで、ゲームの仕組みを1から理解するために制作。2P同期処理と当たり判定の設計に苦労した。</em>
           </p>
           <div class="pf-tags">
             <span>Godot 4</span><span>C#</span><span>2Dゲーム</span>
@@ -100,6 +109,7 @@
           </div>
           <p class="pf-card-desc">
             このサイト自体。アルゴリズム14種（C# / Python）のコードをタイピング練習できるWebアプリ。WPM計測・ハイスコア保存・仮想キーボード・ダークモード・カスタムコード貼り付けに対応。
+            <em class="pf-motive">訓練校で学んだコードを体で覚えるために制作。Blazor WASMのJavaScript相互運用（IJSRuntime）の習得が一番の学びだった。</em>
           </p>
           <div class="pf-tags">
             <span>C#</span><span>Blazor WASM</span><span>GitHub Pages</span>
@@ -119,6 +129,7 @@
           </div>
           <p class="pf-card-desc">
             NeoForge 1.21.1向けのMinecraft MOD。ゲーム内チャットをリアルタイムで翻訳して表示。友人グループへ配布・実運用中。
+            <em class="pf-motive">外国人の友人とMinecraftで一緒に遊ぶために制作。Javaとゲームエンジン固有のイベントシステムを初めて触るところが難しかった。</em>
           </p>
           <div class="pf-tags">
             <span>Java</span><span>NeoForge 1.21.1</span><span>Minecraft MOD</span>
@@ -323,6 +334,24 @@
   font-size: 0.85rem;
   font-weight: 700;
   color: var(--text);
+}
+
+.pf-bio {
+  margin: 12px 0 0;
+  font-size: 0.9rem;
+  line-height: 1.7;
+  color: var(--text-muted);
+  max-width: 600px;
+}
+
+.pf-motive {
+  display: block;
+  margin-top: 8px;
+  font-size: 0.8rem;
+  font-style: italic;
+  color: var(--text-muted);
+  border-left: 2px solid var(--border);
+  padding-left: 8px;
 }
 
 .pf-footer-note {
