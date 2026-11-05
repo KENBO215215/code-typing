@@ -3,7 +3,7 @@
 @inject IJSRuntime JS
 
 <div class="page-header">
-    <h2 class="page-title">⌨️ Code Typing Practice <span class="page-version">v1.3</span></h2>
+    <h2 class="page-title">⌨️ Code Typing Practice <span class="page-version">v1.4</span></h2>
     @if (IsComplete)
     {
         <div class="complete-badge">✅ Complete!</div>
@@ -194,6 +194,10 @@
                 <div class="stat-lbl">WPM</div>
             </div>
             <div class="stat-card">
+                <div class="stat-val">@ElapsedFormatted</div>
+                <div class="stat-lbl">Time</div>
+            </div>
+            <div class="stat-card">
                 <div class="stat-val">@CorrectChars</div>
                 <div class="stat-lbl">Correct</div>
             </div>
@@ -202,6 +206,9 @@
                 <div class="stat-lbl">Best</div>
             </div>
 		</div>
+        <div class="type-progress-wrap">
+            <div class="type-progress-bar @(IsComplete ? "type-progress-bar--done" : "")" style="width:@ProgressPct%;"></div>
+        </div>
 	</div>
 </div>
 
@@ -615,6 +622,8 @@
 	int TotalTyped => Typed?.Length ?? 0;
 	int CorrectChars => ComputeCorrect();
 	string Accuracy => TotalTyped == 0 ? "0" : ((double)CorrectChars / TotalTyped * 100).ToString("F1");
+	int ProgressPct => TypingTarget.Length > 0 ? Math.Min(100, (int)(_typed.Length * 100.0 / TypingTarget.Length)) : 0;
+	string ElapsedFormatted => ElapsedSeconds >= 1 ? $"{(int)(ElapsedSeconds / 60)}:{(int)(ElapsedSeconds % 60):D2}" : "–";
 
 	// Selection handled by property setters
 
