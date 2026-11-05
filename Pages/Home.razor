@@ -1,7 +1,86 @@
 ﻿@page "/"
 
-<PageTitle>Home</PageTitle>
+<PageTitle>Code Typing Practice</PageTitle>
 
-<h1>Hello, world!</h1>
+<div class="home-wrap">
+    <div class="home-hero">
+        <h1>⌨️ Code Typing Practice</h1>
+        <p class="home-sub">アルゴリズムを実際にタイピングして覚えよう</p>
+    </div>
 
-Welcome to your new app.
+    <div class="home-cards">
+        <a class="home-card" href="typing">
+            <div class="home-card-icon">⌨️</div>
+            <div>
+                <div class="home-card-title">Typing Practice</div>
+                <div class="home-card-desc">C# / Python / 疑似言語 — 27種のアルゴリズム。WPM・正答率・スコアをリアルタイム計測。</div>
+            </div>
+        </a>
+        <a class="home-card" href="lang">
+            <div class="home-card-icon">📚</div>
+            <div>
+                <div class="home-card-title">語学学習</div>
+                <div class="home-card-desc">日本語の例文・文法・単語。クローズ問題で日本語を学習。</div>
+            </div>
+        </a>
+    </div>
+</div>
+
+<style>
+    .home-wrap {
+        max-width: 600px;
+        margin: 60px auto 0;
+        padding: 0 20px;
+    }
+    .home-hero {
+        text-align: center;
+        margin-bottom: 40px;
+    }
+    .home-hero h1 {
+        font-size: 1.8rem;
+        font-weight: 700;
+        color: var(--accent, #89dceb);
+        margin-bottom: 8px;
+    }
+    .home-sub {
+        color: var(--text-muted, #666);
+        font-size: 0.95rem;
+    }
+    .home-cards {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+    }
+    .home-card {
+        display: flex;
+        align-items: flex-start;
+        gap: 16px;
+        padding: 20px 22px;
+        border: 1px solid var(--border, #ccc);
+        border-radius: 12px;
+        background: var(--surface, #fff);
+        text-decoration: none;
+        color: inherit;
+        transition: border-color 0.15s, transform 0.1s;
+    }
+    .home-card:hover {
+        border-color: var(--accent, #89dceb);
+        transform: translateY(-1px);
+    }
+    .home-card-icon {
+        font-size: 1.8rem;
+        flex-shrink: 0;
+        margin-top: 2px;
+    }
+    .home-card-title {
+        font-size: 1.05rem;
+        font-weight: 700;
+        color: var(--accent, #89dceb);
+        margin-bottom: 5px;
+    }
+    .home-card-desc {
+        font-size: 0.84rem;
+        color: var(--text-muted, #666);
+        line-height: 1.6;
+    }
+</style>
