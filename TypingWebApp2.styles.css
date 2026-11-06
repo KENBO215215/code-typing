@@ -449,3 +449,21 @@ main[b-on8cqnf239] {
     border-radius: 8px;
     animation: pop-b-9vxif6glsk 0.3s ease;
 }
+
+/* ── Progress bar ── */
+.type-progress-wrap[b-9vxif6glsk] {
+    height: 5px;
+    background: var(--border, #ddd);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-top: 4px;
+}
+.type-progress-bar[b-9vxif6glsk] {
+    height: 100%;
+    background: var(--accent, #89dceb);
+    transition: width 0.15s ease;
+    border-radius: 3px;
+}
+.type-progress-bar--done[b-9vxif6glsk] {
+    background: #a6e3a1;
+}
